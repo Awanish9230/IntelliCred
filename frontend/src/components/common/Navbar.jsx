@@ -19,8 +19,8 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto glass-panel rounded-2xl flex items-center justify-between px-6 py-3">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2 group">
-          <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center transition-transform group-hover:scale-105">
-            <ShieldCheck className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105">
+            <img src="/logo.png" alt="IntelliCred Logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-xl font-bold tracking-tight text-white hidden sm:block">IntelliCred</span>
         </Link>

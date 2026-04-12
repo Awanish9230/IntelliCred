@@ -9,6 +9,7 @@ require('dotenv').config();
 const sessionRoutes = require('./routes/sessionRoutes');
 const apiRoutes = require('./routes/apiRoutes');
 const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const signaling = require('./websockets/signaling');
 
 const app = express();
@@ -28,6 +29,7 @@ app.use(morgan('dev'));
 // Routes
 app.use('/api/v1/session', sessionRoutes);
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1', apiRoutes);
 
 // Setup WebSockets

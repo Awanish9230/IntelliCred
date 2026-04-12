@@ -73,7 +73,7 @@ export default function Profile() {
                         <p className="text-white font-semibold">Personal Loan #91A8</p>
                         <p className="text-gray-500">Oct 05, 2026</p>
                       </div>
-                      <span className="text-brand-secondary font-bold">$1,200</span>
+                      <span className="text-brand-secondary font-bold">₹1,200</span>
                    </div>
                 </div>
               </div>
