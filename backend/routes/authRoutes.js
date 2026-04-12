@@ -13,13 +13,15 @@ router.post('/signup', async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ success: false, error: 'User already exists' });
 
-    const user = new User({ name, email, password });
+    const role = email.includes('admin') ? 'admin' : 'customer';
+    const user = new User({ name, email, password, role });
     await user.save();
 
     const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
     
     res.status(201).json({ success: true, token, user: { id: user._id, name, email, role: user.role } });
   } catch (error) {
+    console.error('Signup Error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
