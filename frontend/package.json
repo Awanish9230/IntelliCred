@@ -27,7 +27,8 @@
     "socket.io-client": "^4.8.3",
     "stream-browserify": "^3.0.0",
     "tailwindcss": "^4.2.2",
-    "util": "^0.12.5"
+    "util": "^0.12.5",
+    "vite-plugin-node-polyfills": "^0.26.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

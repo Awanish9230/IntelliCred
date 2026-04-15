@@ -22,6 +22,7 @@ export default function VideoCallPage() {
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
   const [transcript, setTranscript] = useState('');
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [processingState, setProcessingState] = useState(null); 
   const [decision, setDecision] = useState(null);
@@ -35,6 +36,7 @@ export default function VideoCallPage() {
   const remoteVideoRef = useRef();
   const peersRef = useRef([]);
   const recognitionRef = useRef(null);
+  const isRecordingRef = useRef(false); // Ref to track recording state across effect turns
 
   const interviewSteps = [
     { id: 'identity', label: 'Face Match & Identity', icon: <User className="w-4 h-4" />, status: docVerification ? 'completed' : 'pending' },
@@ -43,6 +45,10 @@ export default function VideoCallPage() {
     { id: 'employment', label: 'Employment Proof', icon: <Briefcase className="w-4 h-4" />, status: transcript.toLowerCase().includes('work') || transcript.toLowerCase().includes('company') ? 'completed' : 'pending' },
     { id: 'consent', label: 'Legal Consent', icon: <CheckCircle2 className="w-4 h-4" />, status: consentDetected ? 'completed' : 'pending' }
   ];
+
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
 
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL;
@@ -89,7 +95,15 @@ export default function VideoCallPage() {
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
 
+      recognitionRef.current.onstart = () => {
+        console.log('Speech Recognition Engine: ONLINE');
+      };
+
       recognitionRef.current.onresult = (event) => {
+        setIsSpeaking(true);
+        clearTimeout(window.speakingTimeout);
+        window.speakingTimeout = setTimeout(() => setIsSpeaking(false), 2000);
+
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
             const finalTxt = event.results[i][0].transcript;
@@ -100,12 +114,28 @@ export default function VideoCallPage() {
               setConsentDetected(true);
             }
 
+            console.log('Transmitting to server:', finalTxt);
             fetch(`${apiUrl}/transcript`, {
                method: 'POST',
                headers: {'Content-Type': 'application/json'},
                body: JSON.stringify({ sessionId, text: finalTxt, speaker: 'customer' })
-            });
+            }).catch(e => console.error('Transcript Sync Failed:', e));
           }
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        // Auto-restart if we are still in recording mode
+        if (isRecordingRef.current) {
+          console.log('Restarting Speech Engine...');
+          recognitionRef.current.start();
+        }
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech Recognition Error:', event.error);
+        if (event.error === 'not-allowed') {
+          toast.error('Microphone permission denied for Speech-to-Text.');
         }
       };
     }
@@ -126,7 +156,10 @@ export default function VideoCallPage() {
 
     return () => {
       socket.disconnect();
-      if (recognitionRef.current) recognitionRef.current.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.onend = null; // Prevent restart on unmount
+        recognitionRef.current.stop();
+      }
       if (stream) stream.getTracks().forEach(t => t.stop());
       clearInterval(ageInterval);
     };
@@ -252,7 +285,12 @@ export default function VideoCallPage() {
                 onClick={() => {if(recognitionRef.current) recognitionRef.current.start(); setIsRecording(true);}}
                 className={`flex items-center space-x-2 px-6 py-4 rounded-2xl font-black uppercase tracking-widest transition-all ${isRecording ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-brand-primary text-white hover:scale-[1.05]'}`}
               >
-                <div className="w-2 h-2 rounded-full bg-current animate-ping"></div>
+                {isRecording && (
+                   <div className="flex items-center space-x-2 mr-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500 animate-ping"></div>
+                      {isSpeaking && <div className="text-[8px] bg-green-500 text-white px-1 rounded animate-bounce">HEARING VOICE</div>}
+                   </div>
+                )}
                 <span>{isRecording ? 'Recording Live' : 'Start Interview'}</span>
               </button>
               <button onClick={() => navigate('/dashboard')} className="p-4 rounded-2xl bg-red-600 text-white hover:bg-red-700 transition-all">

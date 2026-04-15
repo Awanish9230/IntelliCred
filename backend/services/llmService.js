@@ -58,7 +58,7 @@ const callGroq = async (transcript, retryCount = 0) => {
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: `Data: ${transcript}` }
       ],
-      model: "llama-3.1-70b-versatile",
+      model: "llama-3.3-70b-versatile",
       response_format: { type: "json_object" },
       temperature: 0,
       max_tokens: 1000
