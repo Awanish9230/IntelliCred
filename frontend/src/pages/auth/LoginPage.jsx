@@ -24,7 +24,11 @@ export default function LoginPage() {
       if (data.success) {
         login(data.user, data.token);
         toast.success(`Welcome back, ${data.user.name}!`);
-        navigate('/dashboard');
+        if (data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         toast.error(data.error || 'Invalid credentials');
       }

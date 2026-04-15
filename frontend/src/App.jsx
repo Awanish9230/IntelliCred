@@ -20,8 +20,16 @@ import LoanResult from './pages/private/LoanResult';
 // Protected Route Wrapper
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return null; // Or a loader component
+  if (loading) return null;
   return user ? children : <Navigate to="/login" />;
+};
+
+// Admin Only Route Wrapper
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user || user.role !== 'admin') return <Navigate to="/dashboard" />;
+  return children;
 };
 
 function AppRoutes() {
@@ -43,7 +51,7 @@ function AppRoutes() {
           <Route path="/video-call/:sessionId" element={<PrivateRoute><VideoCallPage /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
           <Route path="/loan-result" element={<PrivateRoute><LoanResult /></PrivateRoute>} />
-          <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
+          <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         </Routes>
       </div>
       <Footer />

@@ -33,6 +33,12 @@ export default function Navbar() {
           {user && (
             <Link to="/dashboard" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Dashboard</Link>
           )}
+          {user && user.role === 'admin' && (
+            <Link to="/admin" className="text-sm font-bold text-brand-secondary hover:text-white transition-colors flex items-center">
+              <ShieldCheck className="w-4 h-4 mr-1.5" />
+              Admin Panel
+            </Link>
+          )}
         </div>
 
         {/* Global Actions */}
