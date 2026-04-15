@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const Session = require('../models/Session');
+const AuditLog = require('../models/AuditLog');
 const auth = require('../middleware/auth');
 
-// 1. Initialize a new application session
 router.post('/initialize', auth, async (req, res) => {
   try {
     const sessionId = Math.random().toString(36).substring(7);
@@ -20,11 +20,22 @@ router.post('/initialize', auth, async (req, res) => {
   }
 });
 
-// 2. Fetch user's recent applications
+// 2. Fetch user's recent applications with outcomes
 router.get('/my-applications', auth, async (req, res) => {
   try {
-    const apps = await Session.find({ userId: req.user.id }).sort({ updatedAt: -1 });
-    res.status(200).json({ success: true, applications: apps });
+    const apps = await Session.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
+    
+    // Enrich sessions with their final decisions from AuditLog
+    const enrichedApps = await Promise.all(apps.map(async (app) => {
+      const log = await AuditLog.findOne({ sessionId: app.sessionId }).select('decision createdAt').lean();
+      return {
+        ...app,
+        decision: log ? log.decision : null,
+        submittedAt: log ? log.createdAt : null
+      };
+    }));
+
+    res.status(200).json({ success: true, applications: enrichedApps });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

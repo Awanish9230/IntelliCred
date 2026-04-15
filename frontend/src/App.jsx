@@ -33,11 +33,16 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+import { useLocation } from 'react-router-dom';
+
 function AppRoutes() {
+  const location = useLocation();
+  const isVideoCall = location.pathname.includes('/video-call/');
+
   return (
-    <>
-      <Navbar />
-      <div className="pt-24 min-h-[80vh]">
+    <div className="flex flex-col min-h-screen">
+      {!isVideoCall && <Navbar />}
+      <div className={`${!isVideoCall ? 'pt-24' : ''} flex-1`}>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
@@ -56,8 +61,8 @@ function AppRoutes() {
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         </Routes>
       </div>
-      <Footer />
-    </>
+      {!isVideoCall && <Footer />}
+    </div>
   );
 }
 

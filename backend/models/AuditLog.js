@@ -28,6 +28,7 @@ const auditLogSchema = new mongoose.Schema({
     reason: String,
     score: Number
   },
+  structuredAnswers: mongoose.Schema.Types.Mixed, // Stores (Question -> Answer) pairs
   confidenceScore: Number,
 }, { timestamps: true });
 

@@ -169,28 +169,53 @@ export default function Dashboard() {
                   <p className="text-gray-500 font-medium italic">Empty Activity Log</p>
                 </div>
               ) : apps.map(app => (
-                <div key={app._id} className="glass-panel p-5 rounded-2xl flex items-center justify-between hover:bg-white/5 transition-colors border-white/5">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-gray-500" />
+                <div key={app._id} className="glass-panel p-6 rounded-3xl flex items-center justify-between hover:bg-white/5 transition-all border-white/5 group">
+                  <div className="flex items-center space-x-5">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
+                      app.decision?.eligible ? 'bg-green-500/10 text-green-400' : 
+                      app.decision?.eligible === false ? 'bg-red-500/10 text-red-400' :
+                      'bg-white/5 text-gray-500'
+                    }`}>
+                      {app.decision?.eligible ? <CheckCircle className="w-7 h-7" /> : 
+                       app.decision?.eligible === false ? <XCircle className="w-7 h-7" /> :
+                       app.status === 'cancelled' ? <History className="w-7 h-7" /> : <Clock className="w-7 h-7" />}
                     </div>
                     <div>
-                      <h4 className="font-bold text-white text-sm">{app.loanType}</h4>
-                      <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{new Date(app.createdAt).toLocaleDateString()}</p>
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-black text-white text-base italic uppercase tracking-tighter">{app.loanType}</h4>
+                        {app.status === 'completed' && (
+                           <span className={`text-[10px] px-2 py-0.5 rounded-md font-black uppercase ${app.decision?.eligible ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                              {app.decision?.eligible ? 'Approved' : 'Declined'}
+                           </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                        {app.submittedAt ? `Submitted: ${new Date(app.submittedAt).toLocaleDateString()}` : `Opened: ${new Date(app.createdAt).toLocaleDateString()}`}
+                      </p>
+                      
+                      {app.decision?.eligible === false && (
+                         <p className="text-xs text-red-500/80 mt-2 font-medium flex items-center">
+                            <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
+                            {app.decision?.reason || 'Internal risk parameters not met'}
+                         </p>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-8">
-                    <div className="text-right hidden sm:block">
-                       <span className="text-[10px] text-gray-500 uppercase font-black uppercase tracking-tighter">Session</span>
-                       <span className="font-mono text-[10px] text-brand-primary block">{app.sessionId}</span>
+                  <div className="flex items-center space-x-12">
+                    <div className="text-right hidden lg:block">
+                       <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest block mb-1">Session ID</span>
+                       <span className="font-mono text-[11px] text-brand-primary font-bold">{app.sessionId}</span>
                     </div>
-                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border leading-none ${
-                      app.status === 'completed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                      app.status === 'active' ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/20' :
-                      'bg-red-500/10 text-red-500 border-red-500/20'
-                    }`}>
-                      {app.status}
+                    
+                    <div className="flex flex-col items-end">
+                       <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border leading-none ${
+                        app.status === 'completed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                        app.status === 'active' ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/20' :
+                        'bg-white/5 text-gray-500 border-white/10'
+                      }`}>
+                        {app.status}
+                      </div>
                     </div>
                   </div>
                 </div>
