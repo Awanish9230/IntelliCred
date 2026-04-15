@@ -39,7 +39,11 @@ router.post('/transcript', async (req, res) => {
 // Process application via LLM + Bureau + Risk Engine
 router.post('/process-application', async (req, res) => {
   try {
-    const { sessionId, age, location, email, coords, requested_amount, doc_ver_status, id_image } = req.body;
+    const { 
+      sessionId, age, location, email, coords, 
+      requested_amount, doc_ver_status, id_image,
+      blink_count, stress_level, voice_hash 
+    } = req.body;
 
     // 1. Fetch full transcript for the session
     const transcripts = await Transcript.find({ sessionId }).sort({ createdAt: 1 });
@@ -54,6 +58,9 @@ router.post('/process-application', async (req, res) => {
 
     // 3. LLM Extraction using multi-API fallback
     const llmOutput = await extractLoanData(fullText);
+    llmOutput.risk_flags = llmOutput.risk_flags || [];
+    if (stress_level === 'HIGH') llmOutput.risk_flags.push('High Stress Signature');
+    if (blink_count < 3) llmOutput.risk_flags.push('Low Liveness Confidence (Blinks < 3)');
 
     // 4. Risk Engine (Advanced)
     const decision = evaluateRisk({ 
@@ -76,6 +83,9 @@ router.post('/process-application', async (req, res) => {
       location: location || 'Remote',
       geoCoordinates: coords,
       decision,
+      blinkCount: blink_count,
+      stressLevel: stress_level,
+      voiceHash: voice_hash,
       confidenceScore: llmOutput.confidence_score || 0.9,
     });
     await auditLog.save();

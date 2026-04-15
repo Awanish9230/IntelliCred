@@ -14,7 +14,10 @@ import {
   Activity,
   ArrowUpRight,
   ShieldCheck,
-  X
+  X,
+  Map,
+  Download,
+  Zap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -33,68 +36,6 @@ export default function AdminDashboard() {
   const [selectedIdImage, setSelectedIdImage] = useState(null);
 
   const apiUrl = import.meta.env.VITE_API_URL;
-  // ... (rest of states)
-
-  // ... (inside filteredLogs.map)
-  <button 
-    onClick={() => { setSelectedIdImage(log.idDocumentImage); setShowIdModal(true); }}
-    className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-brand-secondary hover:bg-brand-secondary/10 transition-all"
-    title="View ID Document"
-  >
-    <ShieldCheck className="w-5 h-5" />
-  </button>
-
-  // ... (At bottom of file)
-  {/* ID DOCUMENT MODAL */}
-  {showIdModal && (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-brand-dark/95 backdrop-blur-2xl animate-in fade-in zoom-in duration-300">
-       <div className="w-full max-w-4xl glass-panel rounded-[48px] overflow-hidden flex flex-col shadow-2xl border border-white/5">
-          <div className="p-8 border-b border-white/5 flex items-center justify-between bg-black/40">
-             <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-2xl bg-brand-secondary/10 flex items-center justify-center">
-                   <ShieldCheck className="w-6 h-6 text-brand-secondary" />
-                </div>
-                <div>
-                   <h3 className="text-2xl font-black text-white italic tracking-tight">Identity Forensic Audit</h3>
-                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Manual Review Queue • Reference Code ID-{selectedIdImage?.substring(10,18)}</p>
-                </div>
-             </div>
-             <button onClick={() => setShowIdModal(false)} className="p-4 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all">
-                <X className="w-8 h-8" />
-             </button>
-          </div>
-
-          <div className="flex-1 bg-black p-8 flex items-center justify-center min-h-[400px]">
-             {selectedIdImage ? (
-               <div className="relative group">
-                 <img 
-                   src={selectedIdImage} 
-                   alt="ID Document" 
-                   className="max-h-[70vh] rounded-3xl shadow-2xl border-4 border-white/5 group-hover:border-brand-secondary/30 transition-all duration-700" 
-                 />
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-8 rounded-3xl">
-                    <p className="text-white font-bold text-lg mb-1 italic">Source Image Snapshot</p>
-                    <p className="text-gray-400 text-xs text-brand-secondary font-black uppercase tracking-widest">Captured during live onboarding</p>
-                 </div>
-               </div>
-             ) : (
-               <div className="text-center p-20">
-                  <ShieldAlert className="w-16 h-16 text-gray-700 mx-auto mb-6" />
-                  <p className="text-gray-500 font-bold uppercase tracking-widest text-sm">No Document Snapshot Saved for this Session.</p>
-               </div>
-             )}
-          </div>
-
-          <div className="p-8 bg-black/60 flex items-center justify-between border-t border-white/5">
-             <div className="flex space-x-2">
-                <button className="px-8 py-3 bg-brand-secondary text-brand-dark font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-[1.05] transition-all">Approve ID</button>
-                <button className="px-8 py-3 bg-red-500 text-white font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-[1.05] transition-all">Flag For Fraud</button>
-             </div>
-             <p className="text-[10px] text-gray-600 font-medium">Compliance Seal: ACTIVE FOR SESSION</p>
-          </div>
-       </div>
-    </div>
-  )}
   const token = localStorage.getItem('token');
 
   const headers = {
@@ -144,19 +85,6 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       toast.error('Role update failed');
-    }
-  };
-
-  const viewTranscript = async (sessionId) => {
-    try {
-      const res = await fetch(`${apiUrl}/admin/transcript/${sessionId}`, { headers });
-      const data = await res.json();
-      if (data.success) {
-        setSelectedSessionTranscripts(data.transcripts);
-        setShowTranscriptModal(true);
-      }
-    } catch (err) {
-      toast.error('Could not load transcript');
     }
   };
 
@@ -218,7 +146,6 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-brand-dark p-6 animate-in fade-in duration-500 overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div className="flex items-center space-x-4">
             <div className="p-3 rounded-2xl bg-brand-primary/10 border border-brand-primary/20">
@@ -259,7 +186,6 @@ export default function AdminDashboard() {
         ) : (
           <div className="space-y-10">
             
-            {/* OVERVIEW TAB */}
             {activeTab === 'overview' && stats && (
               <div className="space-y-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -309,28 +235,23 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="glass-panel rounded-[40px] p-8 border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent">
-                     <h3 className="text-xl font-bold text-white mb-6">Service Uptime</h3>
-                     <div className="flex items-center justify-center p-12">
-                        <div className="relative w-32 h-32 flex items-center justify-center">
-                           <svg className="w-full h-full -rotate-90">
-                              <circle cx="64" cy="64" r="60" fill="none" stroke="currentColor" strokeWidth="8" className="text-white/5" />
-                              <circle cx="64" cy="64" r="60" fill="none" stroke="currentColor" strokeWidth="8" className="text-brand-primary" strokeDasharray="376" strokeDashoffset="20" />
-                           </svg>
-                           <div className="absolute inset-0 flex flex-col items-center justify-center">
-                              <span className="text-2xl font-black text-white">99.9%</span>
-                              <span className="text-[10px] text-green-400 font-bold uppercase tracking-tighter">Healthy</span>
-                           </div>
-                        </div>
+                     <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                        <Map className="w-5 h-5 mr-3 text-brand-secondary" />
+                        Risk Geography
+                     </h3>
+                     <div className="space-y-4">
+                        {stats.geoClusters?.map((geo, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                             <span className="text-xs font-bold text-gray-400 uppercase">{geo.region}</span>
+                             <span className="text-xs font-black text-white">{geo.riskLevel}% Risk</span>
+                          </div>
+                        ))}
                      </div>
-                     <p className="text-xs text-center text-gray-500 leading-relaxed font-medium">
-                        Cluster node-01 is processing WebRTC streams with minimal latency.
-                     </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* APPLICATIONS / TRANSCRIPTS TAB */}
             {activeTab === 'logs' && (
               <div className="space-y-6">
                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -385,16 +306,16 @@ export default function AdminDashboard() {
                              <td className="p-6">
                                <div className={`flex items-center space-x-2 text-xs font-bold ${
                                  log.decision?.status === 'pending_admin' ? 'text-orange-400' : 
-                                 log.decision?.eligible ? 'text-green-400' : 'text-red-400'
+                                 log.decision?.status === 'approved' ? 'text-green-400' : 'text-red-400'
                                }`}>
                                   {log.decision?.status === 'pending_admin' ? <ShieldAlert className="w-4 h-4 animation-pulse" /> : 
-                                   log.decision?.eligible ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                                  <span>{log.decision?.status === 'pending_admin' ? 'Pending Admin' : log.decision?.eligible ? 'Approved' : 'Rejected'}</span>
+                                   log.decision?.status === 'approved' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                                  <span>{log.decision?.status === 'pending_admin' ? 'Pending Admin' : log.decision?.status === 'approved' ? 'Approved' : 'Rejected'}</span>
                                </div>
                              </td>
                              <td className="px-8 py-6 text-right">
                                <div className="flex items-center justify-end space-x-2">
-                                 {log.decision?.status === 'pending_admin' && (
+                                 {log.decision?.status !== 'approved' && (
                                    <button 
                                      onClick={() => approvePendingLoan(log._id)}
                                      className="px-4 py-2 rounded-xl bg-brand-primary text-white text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
@@ -402,22 +323,38 @@ export default function AdminDashboard() {
                                      Approve
                                    </button>
                                  )}
-                                 <button 
-                                   onClick={() => viewTranscript(log.sessionId)}
-                                   className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-brand-primary hover:bg-brand-primary/10 transition-all border border-white/5"
-                                   title="View Transcript"
-                                 >
-                                   <MessageSquare className="w-5 h-5" />
-                                 </button>
-                                 {log.decision?.eligible && log.decision?.status !== 'rejected' && (
-                                   <button 
-                                     onClick={() => rejectLoan(log._id)}
-                                     className="p-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
-                                     title="Reject / Override"
-                                   >
-                                     <XCircle className="w-5 h-5" />
-                                   </button>
-                                 )}
+                                 <div className="flex items-center space-x-2">
+                                    <button 
+                                      onClick={() => { 
+                                        fetch(`${apiUrl}/admin/transcript/${log.sessionId}`, { headers })
+                                          .then(res => res.json())
+                                          .then(data => { setSelectedSessionTranscripts(data.transcripts); setShowTranscriptModal(true); });
+                                      }}
+                                      className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-brand-primary hover:bg-brand-primary/10 transition-all"
+                                      title="Review Transcript"
+                                    >
+                                      <MessageSquare className="w-5 h-5" />
+                                    </button>
+                                    <button 
+                                      onClick={() => { setSelectedIdImage(log.idDocumentImage); setShowIdModal(true); }}
+                                      className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-brand-secondary hover:bg-brand-secondary/10 transition-all"
+                                      title="View ID Document"
+                                    >
+                                      <ShieldCheck className="w-5 h-5" />
+                                    </button>
+                                    <button 
+                                      onClick={() => window.open(`${apiUrl}/admin/logs/${log._id}/report`, '_blank')}
+                                      className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                                      title="Download Forensic Audit PDF"
+                                    >
+                                      <Download className="w-5 h-5" />
+                                    </button>
+                                    {log.decision?.status === 'approved' && (
+                                      <div className="p-3 rounded-xl bg-green-500/10 text-green-400 border border-green-500/20" title="Payout Processed via RazorpayX">
+                                        <Zap className="w-5 h-5" />
+                                      </div>
+                                    )}
+                                 </div>
                                  <button onClick={() => deleteUser(log._id)} className="p-3 rounded-xl bg-white/5 text-gray-700 hover:text-red-500 transition-all opacity-20 hover:opacity-100">
                                    <Trash2 className="w-5 h-5" />
                                  </button>
@@ -525,7 +462,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ID DOCUMENT MODAL */}
+      {/* ID DOCUMENT MODAL (Restored & Cleaned) */}
       {showIdModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-brand-dark/95 backdrop-blur-2xl animate-in fade-in zoom-in duration-300">
            <div className="w-full max-w-4xl glass-panel rounded-[48px] overflow-hidden flex flex-col shadow-2xl border border-white/5">
@@ -566,11 +503,10 @@ export default function AdminDashboard() {
               </div>
 
               <div className="p-8 bg-black/60 flex items-center justify-between border-t border-white/5">
-                 <div className="flex space-x-2">
-                    <button className="px-8 py-3 bg-brand-secondary text-brand-dark font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-[1.05] transition-all">Approve ID</button>
-                    <button className="px-8 py-3 bg-red-500 text-white font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-[1.05] transition-all">Flag For Fraud</button>
+                 <div className="flex space-x-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    Compliance Seal: ACTIVE FOR SESSION
                  </div>
-                 <p className="text-[10px] text-gray-600 font-medium">Compliance Seal: ACTIVE FOR SESSION</p>
+                 <button onClick={() => setShowIdModal(false)} className="px-8 py-3 bg-white/5 text-white font-black rounded-2xl uppercase text-xs tracking-widest hover:bg-white/10 transition-all">Close Viewer</button>
               </div>
            </div>
         </div>

@@ -26,8 +26,14 @@ const auditLogSchema = new mongoose.Schema({
     interest_rate: Number,
     tenure: [Number],
     reason: String,
-    score: Number
+    score: Number,
+    trustProfile: mongoose.Schema.Types.Mixed,
+    status: String
   },
+  payoutData: mongoose.Schema.Types.Mixed, // Receipt from RazorpayX
+  blinkCount: Number,
+  stressLevel: String,
+  voiceHash: String,
   structuredAnswers: mongoose.Schema.Types.Mixed, // Stores (Question -> Answer) pairs
   confidenceScore: Number,
 }, { timestamps: true });

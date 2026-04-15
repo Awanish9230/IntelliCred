@@ -9,6 +9,8 @@ import {
   Clock, AlertTriangle, MapPin, Home, CreditCard
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import * as faceapi from 'face-api.js';
+import Tesseract from 'tesseract.js';
 
 const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 const socket = io(socketUrl);
@@ -59,6 +61,9 @@ export default function VideoCallPage() {
   const [transcript, setTranscript] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [showESign, setShowESign] = useState(false);
+  const [eSignStatus, setESignStatus] = useState('PENDING'); // PENDING, SIGNED
+  const [followUps, setFollowUps] = useState([]);
   const [processingState, setProcessingState] = useState(null); 
   const [decision, setDecision] = useState(null);
   const [geoData, setGeoData] = useState({ lat: 0, lng: 0, address: 'Detecting...' });
@@ -66,6 +71,14 @@ export default function VideoCallPage() {
   const [consentDetected, setConsentDetected] = useState(false);
   const [docVerification, setDocVerification] = useState(null);
   const [targetLoanAmount, setTargetLoanAmount] = useState('');
+  
+  // AI Module States
+  const [blinkCount, setBlinkCount] = useState(0);
+  const [isLivenessActive, setIsLivenessActive] = useState(false);
+  const [isScanningID, setIsScanningID] = useState(false);
+  const [ocrResult, setOcrResult] = useState(null);
+  const [stressLevel, setStressLevel] = useState('NORMAL'); // NORMAL, ELEVATED, HIGH
+  const [voiceHash, setVoiceHash] = useState(null);
 
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
@@ -120,6 +133,22 @@ export default function VideoCallPage() {
         console.error("Media Error: ", err);
       });
 
+    // 1b. Load Face-API Models for Liveness
+    const loadModels = async () => {
+      const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+        ]);
+        console.log('AI Liveness Models: READY');
+        setIsLivenessActive(true);
+      } catch (e) {
+        console.error('Liveness Model Load Failed:', e);
+      }
+    };
+    loadModels();
+
     // Setup Speech Recognition
     if ('webkitSpeechRecognition' in window) {
       const SpeechRecognition = window.webkitSpeechRecognition;
@@ -158,7 +187,13 @@ export default function VideoCallPage() {
                method: 'POST',
                headers: {'Content-Type': 'application/json'},
                body: JSON.stringify({ sessionId, text: finalTxt, speaker: 'customer' })
-            }).catch(e => console.error('Transcript Sync Failed:', e));
+            }).catch(e => {
+               console.error('Transcript Sync Failed, saving for later:', e);
+               // Simple localStorage fallback for offline survival
+               const pending = JSON.parse(localStorage.getItem('pending_transcripts') || '[]');
+               pending.push({ sessionId, text: finalTxt, timestamp: Date.now() });
+               localStorage.setItem('pending_transcripts', JSON.stringify(pending));
+            });
           }
         }
       };
@@ -232,6 +267,102 @@ export default function VideoCallPage() {
     }
   }, [stream, peers.length]);
 
+  // 4b. AI Forensic Loop: Blink Detection & Liveness
+  useEffect(() => {
+    if (!isLivenessActive || !stream || !localVideoRef.current) return;
+
+    let detectorInterval;
+    const runLiveness = async () => {
+       const detection = await faceapi.detectSingleFace(
+         localVideoRef.current, 
+         new faceapi.TinyFaceDetectorOptions()
+       ).withFaceLandmarks();
+
+       if (detection) {
+         const landmarks = detection.landmarks;
+         const leftEye = landmarks.getLeftEye();
+         const rightEye = landmarks.getRightEye();
+
+         // Simple Eye Aspect Ratio (EAR) approximation
+         const dist = (p1, p2) => Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+         const leftEAR = dist(leftEye[1], leftEye[5]) / dist(leftEye[0], leftEye[3]);
+         
+         if (leftEAR < 0.2) { // Blink detected
+            setBlinkCount(prev => prev + 1);
+         }
+       }
+    };
+
+    detectorInterval = setInterval(runLiveness, 500);
+    return () => clearInterval(detectorInterval);
+  }, [isLivenessActive, stream]);
+
+  // 4c. Real-time Stress Mapping
+  useEffect(() => {
+    if (!transcript) return;
+    
+    const stressWords = ['um', 'uh', 'maybe', 'not sure', 'actually', 'uhh', 'hmm'];
+    const words = transcript.toLowerCase().split(' ');
+    const stressCount = words.filter(w => stressWords.includes(w)).length;
+    
+    // If more than 3 stress words in recent transcript, elevate stress
+    if (stressCount > 5) setStressLevel('HIGH');
+    else if (stressCount > 2) setStressLevel('ELEVATED');
+    else setStressLevel('NORMAL');
+    
+  }, [transcript]);
+
+  // 5. Adaptive Bitrate & Quality Management
+  useEffect(() => {
+    if (!stream) return;
+    
+    const monitorNetwork = () => {
+      // @ts-ignore - navigator.connection is experimental but useful
+      const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      if (conn) {
+        const { downlink, rtt } = conn;
+        // If speed is slow (< 2Mbps) or latency is high (> 300ms), downscale
+        if (downlink < 2 || rtt > 300) {
+           console.warn('NETWORK DEGRADED: Reducing video quality for stability');
+           stream.getVideoTracks().forEach(track => {
+              // Apply lower resolution constraints
+              track.applyConstraints({
+                 width: { max: 640 },
+                 height: { max: 360 },
+                 frameRate: { max: 15 }
+              }).catch(e => console.log('Bitrate Adaption: FAILED', e));
+           });
+        }
+      }
+    };
+
+    const netInterval = setInterval(monitorNetwork, 10000);
+    return () => clearInterval(netInterval);
+  }, [stream]);
+
+  // 5b. Voice Signature Capture (Frequency Fingerprinting)
+  useEffect(() => {
+    if (!stream || voiceHash) return;
+    
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyzer = audioContext.createAnalyser();
+    source.connect(analyzer);
+    
+    // Capture a frequency snapshot after 5 seconds of speaking
+    const captureVoice = () => {
+       const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+       analyzer.getByteFrequencyData(dataArray);
+       const hash = Array.from(dataArray.slice(0, 10)).join('|');
+       setVoiceHash(hash);
+       console.log('Voice Signature: ANCHORED', hash);
+       audioContext.close();
+    };
+
+    const voiceTimeout = setTimeout(captureVoice, 10000);
+    return () => clearTimeout(voiceTimeout);
+  }, [stream]);
+
   const purgeSessionPrivacy = () => {
     console.log('STRICT PRIVACY ENFORCED: Purging media and permissions...');
     
@@ -252,6 +383,44 @@ export default function VideoCallPage() {
     setIsSpeaking(false);
     setIsRecording(false);
     localStorage.removeItem('id_image'); // Remove raw image after session
+  };
+
+  // 6. OCR ID Scanning Module
+  const handleScanID = async () => {
+    if (!localVideoRef.current) return;
+    setIsScanningID(true);
+    const scanToast = toast.loading('Forensic OCR scanning in progress...');
+    
+    try {
+       // Capture frame from video
+       const canvas = document.createElement('canvas');
+       canvas.width = localVideoRef.current.videoWidth;
+       canvas.height = localVideoRef.current.videoHeight;
+       const ctx = canvas.getContext('2d');
+       ctx.drawImage(localVideoRef.current, 0, 0);
+       const imageBase64 = canvas.toDataURL('image/jpeg');
+
+       const result = await Tesseract.recognize(imageBase64, 'eng', {
+         logger: m => console.log(m)
+       });
+
+       console.log('OCR Complete:', result.data.text);
+       setOcrResult(result.data.text);
+       
+       // Compare with stated name (Simple fuzzy match)
+       const statedName = (structuredAnswers['identity_verify'] || '').toLowerCase();
+       const foundOnID = result.data.text.toLowerCase();
+       
+       if (statedName && foundOnID.includes(statedName.split(' ')[0])) {
+          toast.success('ID match confirmed!', { id: scanToast });
+       } else {
+          toast.success('ID data extracted. Analyzing...', { id: scanToast });
+       }
+    } catch (err) {
+       toast.error('OCR Scan failed. Please try again.', { id: scanToast });
+    } finally {
+       setIsScanningID(false);
+    }
   };
 
   const handleStartImmersive = () => {
@@ -276,6 +445,27 @@ export default function VideoCallPage() {
     }
 
     setIsClarifying(false);
+    
+    // Dynamic Follow-up Logic
+    const keywords = {
+       'business': { id: 'biz_type', q: 'Could you specify the nature of your business and its age?', icon: <Briefcase className="w-5 h-5" /> },
+       'personal': { id: 'personal_use', q: 'What specific personal emergency or purchase is this for?', icon: <AlertTriangle className="w-5 h-5" /> },
+       'loan': { id: 'loan_qty', q: 'How many total active loans do you have as of today?', icon: <Landmark className="w-5 h-5" /> }
+    };
+
+    Object.keys(keywords).forEach(key => {
+       if (currentAnswer.toLowerCase().includes(key) && !structuredAnswers[keywords[key].id]) {
+          setFollowUps(prev => [...prev, keywords[key]]);
+       }
+    });
+
+    if (followUps.length > 0) {
+       const nextF = followUps[0];
+       setFollowUps(prev => prev.slice(1));
+       aiQuestions.splice(currentQuestionIndex + 1, 0, nextF);
+       toast.success('Analyzing mention of ' + nextF.id.split('_')[0] + '...', { icon: '🔍' });
+    }
+
     setAnsweredCount(prev => prev + 1);
 
     if (currentQuestionIndex < aiQuestions.length - 1) {
@@ -283,6 +473,7 @@ export default function VideoCallPage() {
       toast.success('Analyzing...', { duration: 1000 });
     } else {
       toast.success('All questions completed!');
+      setShowESign(true); // Trigger legal consent modal
     }
   };
 
@@ -319,8 +510,11 @@ export default function VideoCallPage() {
           coords: { lat: geoData.lat, lng: geoData.lng },
           email: JSON.parse(localStorage.getItem('user') || '{}').email,
           requested_amount: targetLoanAmount,
-          doc_ver_status: docVerification?.verification_status || 'NOT_DONE',
+          doc_ver_status: docVerification?.verification_status || 'PENDING',
           id_image: localStorage.getItem('id_image'),
+          blink_count: blinkCount,
+          stress_level: stressLevel,
+          voice_hash: voiceHash,
           structured_answers: structuredAnswers
         })
       });
@@ -383,6 +577,18 @@ export default function VideoCallPage() {
           </div>
           <div className="flex items-center space-x-6">
              <div className="text-right">
+                <p className="text-[10px] text-gray-500 uppercase font-black tracking-tighter">Stress Mapping</p>
+                <p className={`text-sm font-black transition-all ${stressLevel === 'HIGH' ? 'text-red-500 animate-pulse' : stressLevel === 'ELEVATED' ? 'text-yellow-500' : 'text-green-400'}`}>
+                  {stressLevel}
+                </p>
+             </div>
+             <div className="text-right">
+                <p className="text-[10px] text-gray-500 uppercase font-black tracking-tighter">Blinks (Liveness)</p>
+                <p className="text-sm text-brand-secondary font-black">
+                  {blinkCount} <span className="text-[10px] opacity-50">Verified</span>
+                </p>
+             </div>
+             <div className="text-right">
                 <p className="text-[10px] text-gray-500 uppercase font-black">AI Age Confidence</p>
                 <p className={`text-sm font-black transition-all ${estimatedAge ? 'text-brand-secondary' : 'text-gray-600 animate-pulse'}`}>
                   {estimatedAge ? `${estimatedAge} yrs` : 'Scanning...'}
@@ -416,7 +622,15 @@ export default function VideoCallPage() {
                      <h3 className="text-lg font-bold text-white italic leading-tight mb-4">
                         {aiQuestions[currentQuestionIndex].q}
                      </h3>
-                     <div className="flex items-center justify-end">
+                     <div className="flex items-center justify-end space-x-3">
+                        <button 
+                          onClick={handleScanID}
+                          disabled={isScanningID}
+                          className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:bg-white/10 transition-all flex items-center space-x-2"
+                        >
+                          <Fingerprint className={`w-3 h-3 ${isScanningID ? 'animate-spin' : ''}`} />
+                          <span>{isScanningID ? 'Scanning...' : 'Scan ID'}</span>
+                        </button>
                         <button 
                           onClick={handleNextQuestion}
                           className="bg-brand-primary text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center space-x-2"
@@ -460,6 +674,53 @@ export default function VideoCallPage() {
             </div>
         </div>
       </div>
+
+      {/* 7. DIGITAL E-SIGN MODAL (Final Consent) */}
+      {showESign && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+           <div className="max-w-xl w-full glass-panel p-10 rounded-[48px] border-brand-primary/40 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/10 blur-3xl rounded-full -mr-16 -mt-16"></div>
+              
+              <div className="flex items-center space-x-4 mb-8">
+                 <div className="w-16 h-16 bg-brand-primary/20 rounded-2xl flex items-center justify-center">
+                    <ShieldCheck className="w-8 h-8 text-brand-primary" />
+                 </div>
+                 <div>
+                    <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">Legal Digital E-Sign</h2>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Aadhar-Linked Forensic Consent</p>
+                 </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-6 mb-8">
+                 <p className="text-xs text-gray-300 leading-relaxed italic mb-4">
+                    "I hereby declare that all information provided during this forensic video interview for the loan application ID <b>{sessionId}</b> is true and accurate to the best of my knowledge."
+                 </p>
+                 <div className="flex items-center space-x-3 text-brand-secondary">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Self-Declaration Anchored</span>
+                 </div>
+              </div>
+
+              <div className="space-y-4">
+                 <div className="relative">
+                    <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-primary opacity-50" />
+                    <input 
+                      type="text" 
+                      placeholder="Enter Full Name for E-Signature" 
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-white focus:outline-none focus:border-brand-primary transition-all"
+                    />
+                 </div>
+                 <button 
+                   onClick={() => { setESignStatus('SIGNED'); setShowESign(false); toast.success('Digital Consent Anchored!'); }}
+                   className="w-full py-4 bg-brand-primary text-white font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+                 >
+                   Sign and Submit Application
+                 </button>
+                 <button onClick={() => setShowESign(false)} className="w-full text-[10px] text-gray-500 font-black uppercase tracking-widest py-2">Cancel</button>
+              </div>
+           </div>
+        </div>
+      )}
 
       {/* RIGHT SIDEBAR: Interview Guide & Intelligence */}
       <div className="w-full lg:w-[420px] flex flex-col space-y-6">

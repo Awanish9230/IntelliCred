@@ -53,15 +53,21 @@ const evaluateRisk = (customerData, llmOutput, bureauData) => {
     score -= (risk_flags.length * 15);
   }
 
-  // 3. Final Decision Logic
-  if (score < 45) {
-    return {
-      eligible: false,
-      reason: 'Low risk score. Combined signals indicate high probability of fraud or inability to pay.',
-      loan_amount: 0,
-      interest_rate: 0
-    };
+  // 3. Multi-Step Trust Profile Scoring
+  const trustProfile = {
+    identity: docVerificationStatus === 'SUCCESS' ? 100 : 60,
+    financial: credit_score > 700 ? 90 : credit_score > 600 ? 70 : 40,
+    behavioral: (risk_flags && risk_flags.length > 0) ? (100 - (risk_flags.length * 20)) : 100
+  };
+  
+  // High suspicions of misrepresentation
+  if (declared_age && Math.abs(declared_age - estimatedAge) > 5) {
+    trustProfile.identity -= 40;
+    score -= 40;
   }
+
+  // Final average boost/reduction
+  if (trustProfile.identity < 50) score -= 30;
 
   // 4. Offer Generation based on Score & Requested Amount
   const multiplier = score / 12;
@@ -70,28 +76,30 @@ const evaluateRisk = (customerData, llmOutput, bureauData) => {
   const interest_rate = Math.max(7.4, 20 - (score / 8)); // Dynamic interest
   const tenure = score > 80 ? [12, 24, 36, 48, 60] : [12, 24, 36];
 
+  const baseResponse = {
+    eligible: score >= 45,
+    loan_amount: Math.round(loan_amount / 1000) * 1000,
+    interest_rate: parseFloat(interest_rate.toFixed(2)),
+    tenure,
+    score,
+    trustProfile,
+    reason: score < 45 ? 'Low risk score. Combined signals indicate high probability of fraud.' : `Risk assessment successful.`
+  };
+
   // 5. High Amount Guardrail (> 50,000)
   if (requestedAmount > 50000) {
     return {
+      ...baseResponse,
       eligible: true,
       isPendingAdmin: true,
       status: 'pending_admin',
-      loan_amount: Math.round(loan_amount / 1000) * 1000,
-      interest_rate: parseFloat(interest_rate.toFixed(2)),
-      tenure,
-      reason: `Amount ₹${requestedAmount} exceeds auto-approval threshold. PENDING MANUAL ADMIN REVIEW.`,
-      score
+      reason: `Amount ₹${requestedAmount} exceeds auto-approval threshold. PENDING MANUAL ADMIN REVIEW.`
     };
   }
 
   return {
-    eligible: true,
-    status: 'approved',
-    loan_amount: Math.round(loan_amount / 1000) * 1000,
-    interest_rate: parseFloat(interest_rate.toFixed(2)),
-    tenure,
-    reason: `Risk assessment successful. Score: ${score}/100. AI Forensics verified.`,
-    score
+    ...baseResponse,
+    status: score >= 45 ? 'approved' : 'rejected'
   };
 };
 

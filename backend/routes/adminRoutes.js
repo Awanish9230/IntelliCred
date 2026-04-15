@@ -4,6 +4,8 @@ const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const Transcript = require('../models/Transcript');
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
+const { generateForensicReport } = require('../services/reportService');
+const { executePayout } = require('../services/payoutService');
 
 // Dashboard Statistics
 router.get('/stats', verifyToken, isAdmin, async (req, res) => {
@@ -31,7 +33,13 @@ router.get('/stats', verifyToken, isAdmin, async (req, res) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // Advanced: Real-time connections
+    // Advanced: Geo Clusters
+    const regions = ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad'];
+    const geoClusters = regions.map(region => ({
+       region,
+       riskLevel: Math.floor(Math.random() * 40) + 10 // Mock cluster logic
+    }));
+
     const activeConnections = req.io ? req.io.engine.clientsCount : 0;
 
     res.json({
@@ -42,7 +50,8 @@ router.get('/stats', verifyToken, isAdmin, async (req, res) => {
         approvalRate: `${approvalRate}%`,
         avgLoan: `₹${avgLoan}`,
         activeConnections,
-        riskDistribution
+        riskDistribution,
+        geoClusters
       }
     });
   } catch (error) {
@@ -107,6 +116,8 @@ router.patch('/logs/:id/decision', verifyToken, isAdmin, async (req, res) => {
       const log = await AuditLog.findById(req.params.id);
       if (!log) return res.status(404).json({ success: false, error: 'Log not found' });
       
+      const prevStatus = log.decision?.status;
+
       // Update decision
       log.decision = { 
         ...log.decision, 
@@ -114,11 +125,36 @@ router.patch('/logs/:id/decision', verifyToken, isAdmin, async (req, res) => {
         eligible: eligible !== undefined ? eligible : log.decision.eligible
       };
       
+      // TRIGGER PAYOUT if status changed to approved
+      if (status === 'approved' && prevStatus !== 'approved') {
+         console.log('ADMIN APPROVED: Disbursing funds...');
+         const payoutResult = await executePayout({
+            amount: log.decision.loan_amount,
+            name: log.email || 'Customer',
+            sessionId: log.sessionId
+         });
+         log.payoutData = payoutResult;
+      }
+
       await log.save();
       res.json({ success: true, message: 'Loan status updated by admin', log });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Failed to update decision' });
     }
+});
+
+// Download Forensic PDF Report
+router.get('/logs/:id/report', verifyToken, isAdmin, async (req, res) => {
+  try {
+     const log = await AuditLog.findById(req.params.id);
+     const transcripts = await Transcript.find({ sessionId: log.sessionId }).sort({ createdAt: 1 });
+     const transcriptText = transcripts.map(t => `[${t.speaker}] ${t.text}`).join('\n');
+
+     const pdfPath = await generateForensicReport(log, transcriptText, log.decision?.trustProfile || {});
+     res.download(pdfPath);
+  } catch (error) {
+     res.status(500).json({ success: false, error: 'Failed to generate report' });
+  }
 });
 
 module.exports = router;

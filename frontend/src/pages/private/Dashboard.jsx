@@ -172,20 +172,20 @@ export default function Dashboard() {
                 <div key={app._id} className="glass-panel p-6 rounded-3xl flex items-center justify-between hover:bg-white/5 transition-all border-white/5 group">
                   <div className="flex items-center space-x-5">
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
-                      app.decision?.eligible ? 'bg-green-500/10 text-green-400' : 
-                      app.decision?.eligible === false ? 'bg-red-500/10 text-red-400' :
+                      app.decision?.status === 'approved' ? 'bg-green-500/10 text-green-400' : 
+                      app.decision?.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
                       'bg-white/5 text-gray-500'
                     }`}>
-                      {app.decision?.eligible ? <CheckCircle className="w-7 h-7" /> : 
-                       app.decision?.eligible === false ? <XCircle className="w-7 h-7" /> :
+                      {app.decision?.status === 'approved' ? <CheckCircle className="w-7 h-7" /> : 
+                       app.decision?.status === 'rejected' ? <XCircle className="w-7 h-7" /> :
                        app.status === 'cancelled' ? <History className="w-7 h-7" /> : <Clock className="w-7 h-7" />}
                     </div>
                     <div>
                       <div className="flex items-center space-x-2">
                         <h4 className="font-black text-white text-base italic uppercase tracking-tighter">{app.loanType}</h4>
                         {app.status === 'completed' && (
-                           <span className={`text-[10px] px-2 py-0.5 rounded-md font-black uppercase ${app.decision?.eligible ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-                              {app.decision?.eligible ? 'Approved' : 'Declined'}
+                           <span className={`text-[10px] px-2 py-0.5 rounded-md font-black uppercase ${app.decision?.status === 'approved' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                              {app.decision?.status === 'approved' ? 'Approved' : 'Declined'}
                            </span>
                         )}
                       </div>
@@ -193,7 +193,7 @@ export default function Dashboard() {
                         {app.submittedAt ? `Submitted: ${new Date(app.submittedAt).toLocaleDateString()}` : `Opened: ${new Date(app.createdAt).toLocaleDateString()}`}
                       </p>
                       
-                      {app.decision?.eligible === false && (
+                      {app.decision?.status === 'rejected' && (
                          <p className="text-xs text-red-500/80 mt-2 font-medium flex items-center">
                             <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
                             {app.decision?.reason || 'Internal risk parameters not met'}

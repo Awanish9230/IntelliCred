@@ -15,3 +15,12 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => console.log('IntelliCred SW: ONLINE', reg.scope))
+      .catch(err => console.log('IntelliCred SW: ERROR', err));
+  });
+}
