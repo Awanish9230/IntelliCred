@@ -10,6 +10,7 @@ const sessionRoutes = require('./routes/sessionRoutes');
 const apiRoutes = require('./routes/apiRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const applicationRoutes = require('./routes/applicationRoutes');
 const signaling = require('./websockets/signaling');
 
 const app = express();
@@ -23,7 +24,8 @@ const io = new Server(server, {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(morgan('dev'));
 
 // Routes
@@ -33,6 +35,7 @@ app.use('/api/v1/admin', (req, res, next) => {
   req.io = io;
   next();
 }, adminRoutes);
+app.use('/api/v1/applications', applicationRoutes);
 app.use('/api/v1', apiRoutes);
 
 // Setup WebSockets

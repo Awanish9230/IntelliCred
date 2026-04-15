@@ -29,8 +29,72 @@ export default function AdminDashboard() {
   // Transcript Modal State
   const [selectedSessionTranscripts, setSelectedSessionTranscripts] = useState(null);
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
+  const [showIdModal, setShowIdModal] = useState(false);
+  const [selectedIdImage, setSelectedIdImage] = useState(null);
 
   const apiUrl = import.meta.env.VITE_API_URL;
+  // ... (rest of states)
+
+  // ... (inside filteredLogs.map)
+  <button 
+    onClick={() => { setSelectedIdImage(log.idDocumentImage); setShowIdModal(true); }}
+    className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-brand-secondary hover:bg-brand-secondary/10 transition-all"
+    title="View ID Document"
+  >
+    <ShieldCheck className="w-5 h-5" />
+  </button>
+
+  // ... (At bottom of file)
+  {/* ID DOCUMENT MODAL */}
+  {showIdModal && (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-brand-dark/95 backdrop-blur-2xl animate-in fade-in zoom-in duration-300">
+       <div className="w-full max-w-4xl glass-panel rounded-[48px] overflow-hidden flex flex-col shadow-2xl border border-white/5">
+          <div className="p-8 border-b border-white/5 flex items-center justify-between bg-black/40">
+             <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-2xl bg-brand-secondary/10 flex items-center justify-center">
+                   <ShieldCheck className="w-6 h-6 text-brand-secondary" />
+                </div>
+                <div>
+                   <h3 className="text-2xl font-black text-white italic tracking-tight">Identity Forensic Audit</h3>
+                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Manual Review Queue • Reference Code ID-{selectedIdImage?.substring(10,18)}</p>
+                </div>
+             </div>
+             <button onClick={() => setShowIdModal(false)} className="p-4 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all">
+                <X className="w-8 h-8" />
+             </button>
+          </div>
+
+          <div className="flex-1 bg-black p-8 flex items-center justify-center min-h-[400px]">
+             {selectedIdImage ? (
+               <div className="relative group">
+                 <img 
+                   src={selectedIdImage} 
+                   alt="ID Document" 
+                   className="max-h-[70vh] rounded-3xl shadow-2xl border-4 border-white/5 group-hover:border-brand-secondary/30 transition-all duration-700" 
+                 />
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-8 rounded-3xl">
+                    <p className="text-white font-bold text-lg mb-1 italic">Source Image Snapshot</p>
+                    <p className="text-gray-400 text-xs text-brand-secondary font-black uppercase tracking-widest">Captured during live onboarding</p>
+                 </div>
+               </div>
+             ) : (
+               <div className="text-center p-20">
+                  <ShieldAlert className="w-16 h-16 text-gray-700 mx-auto mb-6" />
+                  <p className="text-gray-500 font-bold uppercase tracking-widest text-sm">No Document Snapshot Saved for this Session.</p>
+               </div>
+             )}
+          </div>
+
+          <div className="p-8 bg-black/60 flex items-center justify-between border-t border-white/5">
+             <div className="flex space-x-2">
+                <button className="px-8 py-3 bg-brand-secondary text-brand-dark font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-[1.05] transition-all">Approve ID</button>
+                <button className="px-8 py-3 bg-red-500 text-white font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-[1.05] transition-all">Flag For Fraud</button>
+             </div>
+             <p className="text-[10px] text-gray-600 font-medium">Compliance Seal: ACTIVE FOR SESSION</p>
+          </div>
+       </div>
+    </div>
+  )}
   const token = localStorage.getItem('token');
 
   const headers = {
@@ -254,7 +318,8 @@ export default function AdminDashboard() {
                          <tr className="bg-white/[0.02] text-gray-500 text-[10px] font-black uppercase tracking-[0.25em] border-b border-white/5">
                            <th className="px-8 py-6">Session ID</th>
                            <th className="p-6">Timestamp</th>
-                           <th className="p-6 text-center">Engine Flags</th>
+                           <th className="p-6 text-center">Age Est.</th>
+                           <th className="p-6 text-center">Bureau Score</th>
                            <th className="p-6">Status</th>
                            <th className="px-8 py-6 text-right">Actions</th>
                          </tr>
@@ -270,9 +335,17 @@ export default function AdminDashboard() {
                              </td>
                              <td className="p-6 text-sm text-gray-400">{new Date(log.createdAt).toLocaleString()}</td>
                              <td className="p-6 text-center">
-                               <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-inner ${log.extractedData?.risk_flags?.length > 0 ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/20'}`}>
-                                 {log.extractedData?.risk_flags?.length || 0} Risk Flags
+                               <span className="text-sm font-bold text-gray-300">
+                                 {log.ageEstimate || 'N/A'}
                                </span>
+                             </td>
+                             <td className="p-6 text-center">
+                               <div className="flex flex-col items-center">
+                                 <span className={`text-sm font-black ${log.bureauData?.credit_score > 700 ? 'text-green-400' : 'text-orange-400'}`}>
+                                   {log.bureauData?.credit_score || '---'}
+                                 </span>
+                                 <span className="text-[8px] text-gray-500 uppercase font-black uppercase">FICO Mock</span>
+                               </div>
                              </td>
                              <td className="p-6">
                                <div className={`flex items-center space-x-2 text-xs font-bold ${log.decision?.eligible ? 'text-green-400' : 'text-red-400'}`}>
@@ -288,6 +361,13 @@ export default function AdminDashboard() {
                                    title="View Transcript"
                                  >
                                    <MessageSquare className="w-5 h-5" />
+                                 </button>
+                                 <button 
+                                   onClick={() => { setSelectedIdImage(log.idDocumentImage); setShowIdModal(true); }}
+                                   className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-brand-secondary hover:bg-brand-secondary/10 transition-all"
+                                   title="View ID Document"
+                                 >
+                                   <ShieldCheck className="w-5 h-5" />
                                  </button>
                                  <button className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100">
                                    <Trash2 className="w-5 h-5" />
@@ -391,6 +471,57 @@ export default function AdminDashboard() {
 
               <div className="p-6 bg-black/20 text-center rounded-b-[40px]">
                  <p className="text-[10px] text-gray-500 font-medium">Internal Compliance Record • End-to-End Encrypted Access Only</p>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* ID DOCUMENT MODAL */}
+      {showIdModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-brand-dark/95 backdrop-blur-2xl animate-in fade-in zoom-in duration-300">
+           <div className="w-full max-w-4xl glass-panel rounded-[48px] overflow-hidden flex flex-col shadow-2xl border border-white/5">
+              <div className="p-8 border-b border-white/5 flex items-center justify-between bg-black/40">
+                 <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-secondary/10 flex items-center justify-center">
+                       <ShieldCheck className="w-6 h-6 text-brand-secondary" />
+                    </div>
+                    <div>
+                       <h3 className="text-2xl font-black text-white italic tracking-tight">Identity Forensic Audit</h3>
+                       <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Manual Review Queue</p>
+                    </div>
+                 </div>
+                 <button onClick={() => setShowIdModal(false)} className="p-4 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all">
+                    <X className="w-8 h-8" />
+                 </button>
+              </div>
+
+              <div className="flex-1 bg-black p-8 flex items-center justify-center min-h-[400px]">
+                 {selectedIdImage ? (
+                   <div className="relative group">
+                     <img 
+                       src={selectedIdImage} 
+                       alt="ID Document" 
+                       className="max-h-[70vh] rounded-3xl shadow-2xl border-4 border-white/5 group-hover:border-brand-secondary/30 transition-all duration-700" 
+                     />
+                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-8 rounded-3xl">
+                        <p className="text-white font-bold text-lg mb-1 italic">Source Image Snapshot</p>
+                        <p className="text-gray-400 text-xs text-brand-secondary font-black uppercase tracking-widest">Captured during live onboarding</p>
+                     </div>
+                   </div>
+                 ) : (
+                   <div className="text-center p-20">
+                      <ShieldAlert className="w-16 h-16 text-gray-700 mx-auto mb-6" />
+                      <p className="text-gray-500 font-bold uppercase tracking-widest text-sm">No Document Snapshot Saved for this Session.</p>
+                   </div>
+                 )}
+              </div>
+
+              <div className="p-8 bg-black/60 flex items-center justify-between border-t border-white/5">
+                 <div className="flex space-x-2">
+                    <button className="px-8 py-3 bg-brand-secondary text-brand-dark font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-[1.05] transition-all">Approve ID</button>
+                    <button className="px-8 py-3 bg-red-500 text-white font-black rounded-2xl uppercase text-xs tracking-widest hover:scale-[1.05] transition-all">Flag For Fraud</button>
+                 </div>
+                 <p className="text-[10px] text-gray-600 font-medium">Compliance Seal: ACTIVE FOR SESSION</p>
               </div>
            </div>
         </div>

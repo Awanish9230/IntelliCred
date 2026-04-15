@@ -16,6 +16,7 @@ import VideoCallPage from './pages/private/VideoCallPage';
 import Profile from './pages/private/Profile';
 import AdminDashboard from './pages/private/AdminDashboard';
 import LoanResult from './pages/private/LoanResult';
+import DocumentUploadPage from './pages/private/DocumentUploadPage';
 
 // Protected Route Wrapper
 const PrivateRoute = ({ children }) => {
@@ -51,6 +52,7 @@ function AppRoutes() {
           <Route path="/video-call/:sessionId" element={<PrivateRoute><VideoCallPage /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
           <Route path="/loan-result" element={<PrivateRoute><LoanResult /></PrivateRoute>} />
+          <Route path="/document-verification" element={<PrivateRoute><DocumentUploadPage /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         </Routes>
       </div>

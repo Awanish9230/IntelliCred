@@ -1,52 +1,123 @@
-const axios = require('axios');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Groq = require("groq-sdk");
+require('dotenv').config();
 
-/**
- * Sends combined transcript to standard local Ollama endpoint
- * Assumes Ollama is running on localhost:11434 with a model like 'llama3' or 'mistral'
- */
-const extractDataWithOllama = async (transcriptText, model = 'llama3') => {
-  const prompt = `
-    You are an intelligent data extraction assistant for a loan application system.
-    Read the following transcript between an agent and a customer.
-    Extract the following information:
-    1. income (as a number)
-    2. employment (string)
-    3. loan_purpose (string)
-    4. risk_flags (list of strings representing negative sentiments or risks mentioned)
-    
-    Output strictly in valid JSON format only, matching this structure:
-    {
-      "income": number,
-      "employment": "string",
-      "loan_purpose": "string",
-      "risk_flags": ["string"],
-      "confidence_score": 0.0 to 1.0
-    }
-    
-    Do not output any markdown formatting, only the JSON block.
+// Helper for delay/backoff
+const wait = (ms) => new Promise(res => setTimeout(res, ms));
 
-    Transcript:
-    """
-    ${transcriptText}
-    """
-  `;
+// Gemini Key Rotator
+const geminiKeys = (process.env.GEMINI_API_KEY || "").split(",").map(k => k.trim()).filter(Boolean);
+let currentGeminiIndex = 0;
 
-  try {
-    const response = await axios.post('http://localhost:11434/api/generate', {
-      model: model,
-      prompt: prompt,
-      stream: false,
-      format: 'json' // Supported by newer ollama versions to enforce json
-    });
+const getGeminiClient = () => {
+  if (geminiKeys.length === 0) return null;
+  return new GoogleGenerativeAI(geminiKeys[currentGeminiIndex]);
+};
 
-    const outputText = response.data.response;
-    return JSON.parse(outputText);
-  } catch (error) {
-    console.error('Error with Ollama LLM extraction:', error.message);
-    throw new Error('LLM processing failed');
+const rotateGeminiKey = () => {
+  if (geminiKeys.length > 1) {
+    currentGeminiIndex = (currentGeminiIndex + 1) % geminiKeys.length;
+    console.log(`Switched to Gemini Key #${currentGeminiIndex + 1}`);
   }
 };
 
-module.exports = {
-  extractDataWithOllama
+// Groq Key Rotator 
+const getKeys = () => {
+  const keys = (process.env.GROQ_API_KEY || "").split(",").map(k => k.trim()).filter(Boolean);
+  Object.keys(process.env).forEach(key => {
+    if (key.startsWith("GROQ_KEY_")) keys.push(process.env[key].trim());
+  });
+  return [...new Set(keys)];
 };
+
+const groqKeys = getKeys();
+let currentGroqKeyIndex = 0;
+
+const getGroqClient = () => {
+  if (groqKeys.length === 0) return null;
+  return new Groq({ apiKey: groqKeys[currentGroqKeyIndex] });
+};
+
+const rotateGroqKey = () => {
+  if (groqKeys.length > 1) {
+    currentGroqKeyIndex = (currentGroqKeyIndex + 1) % groqKeys.length;
+    console.log(`Switched to Groq Key #${currentGroqKeyIndex + 1}`);
+  }
+};
+
+const SYSTEM_PROMPT = `Extract JSON from loan transcript: 
+{"income":int,"employment":str,"loan_purpose":str,"declared_age":int,"verbal_consent":bool,"risk_flags":[str],"confidence_score":float}. 
+Look for "agree"/"consent" for verbal_consent. Output JSON ONLY.`;
+
+const callGroq = async (transcript, retryCount = 0) => {
+  const client = getGroqClient();
+  if (!client) throw new Error("Groq Keys missing");
+  try {
+    const completion = await client.chat.completions.create({
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: `Data: ${transcript}` }
+      ],
+      model: "llama-3.1-70b-versatile",
+      response_format: { type: "json_object" },
+      temperature: 0,
+      max_tokens: 1000
+    });
+    return JSON.parse(completion.choices[0].message.content);
+  } catch (error) {
+    if (error.status === 429 && retryCount < groqKeys.length) {
+      console.warn(`Groq Rate Limit hit. Waiting 2s...`);
+      await wait(2000);
+      rotateGroqKey();
+      return callGroq(transcript, retryCount + 1);
+    }
+    if (retryCount >= groqKeys.length) {
+      throw new Error('All Groq API keys have hit their rate limits.');
+    }
+    throw error;
+  }
+};
+
+const callGemini = async (transcript, retryCount = 0) => {
+  const genAI = getGeminiClient();
+  if (!genAI) throw new Error("Gemini Key missing");
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-2.0-flash",
+    generationConfig: { 
+      responseMimeType: "application/json",
+      temperature: 0,
+      maxOutputTokens: 1000
+    }
+  });
+  try {
+    const result = await model.generateContent(`${SYSTEM_PROMPT}\n\nData:\n${transcript}`);
+    return JSON.parse(result.response.text());
+  } catch (error) {
+    if ((error.message?.includes('429') || error.message?.includes('Quota')) && retryCount < geminiKeys.length) {
+      console.warn(`Gemini Rate Limit hit. Waiting 2s...`);
+      await wait(2000);
+      rotateGeminiKey();
+      return callGemini(transcript, retryCount + 1);
+    }
+    if (retryCount >= geminiKeys.length) {
+      throw new Error('All Gemini API keys have hit their rate limits.');
+    }
+    throw error;
+  }
+};
+
+const extractLoanData = async (transcriptText) => {
+  const providers = [{ name: 'Groq', fn: callGroq }]; 
+  let lastError = null;
+  for (const provider of providers) {
+    try {
+      const result = await provider.fn(transcriptText);
+      return { ...result, provider: provider.name };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw new Error(`AI Extraction failed: ${lastError.message}`);
+};
+
+module.exports = { extractLoanData };

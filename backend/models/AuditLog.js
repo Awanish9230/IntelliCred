@@ -12,12 +12,21 @@ const auditLogSchema = new mongoose.Schema({
   },
   ageEstimate: Number,
   location: String,
+  geoCoordinates: {
+    lat: Number,
+    lng: Number
+  },
+  bureauData: mongoose.Schema.Types.Mixed,
+  requestedAmount: Number,
+  docVerificationStatus: String,
+  idDocumentImage: String,
   decision: {
     eligible: Boolean,
     loan_amount: Number,
     interest_rate: Number,
     tenure: [Number],
-    reason: String
+    reason: String,
+    score: Number
   },
   confidenceScore: Number,
 }, { timestamps: true });
