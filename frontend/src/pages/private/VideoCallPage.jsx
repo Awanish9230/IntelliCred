@@ -209,12 +209,23 @@ export default function VideoCallPage() {
       purgeSessionPrivacy();
       socket.disconnect();
       if (recognitionRef.current) {
-        recognitionRef.current.onend = null; // Prevent restart on unmount
+        recognitionRef.current.onend = null; 
         recognitionRef.current.stop();
       }
       clearInterval(ageInterval);
     };
-  }, [sessionId, isVideoOn, currentQuestionIndex]);
+  }, [sessionId]); // Removed isVideoOn and currentQuestionIndex to maintain session stability
+
+  // 4. Speech Recognition Toggle Effect
+  useEffect(() => {
+    if (isRecording && recognitionRef.current) {
+       try {
+         recognitionRef.current.start();
+       } catch (e) {
+         console.log('Recognition already active');
+       }
+    }
+  }, [isRecording]);
 
   // Robust Stream Assignment Helper
   const setVideoStream = (el, isRemote = false) => {
