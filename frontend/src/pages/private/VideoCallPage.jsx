@@ -187,13 +187,13 @@ export default function VideoCallPage() {
 
     // 2. Stable Age Detection (Simulated Forensic Match)
     const ageInterval = setInterval(() => {
-       if (isVideoOn) {
+       if (isVideoOn && isRecording) {
           // If we have doc verification, use a stable age based on it
           const savedDoc = JSON.parse(localStorage.getItem('doc_verification') || '{}');
           if (savedDoc.verification_status === 'SUCCESS') {
              setEstimatedAge(25); // In a real app, calculate from DOB in savedDoc
           } else {
-             setEstimatedAge(prev => prev === 0 ? 22 + (sessionId.length % 8) : prev);
+             setEstimatedAge(22 + (sessionId.length % 8));
           }
        }
     }, 5000);
@@ -383,7 +383,9 @@ export default function VideoCallPage() {
           <div className="flex items-center space-x-6">
              <div className="text-right">
                 <p className="text-[10px] text-gray-500 uppercase font-black">AI Age Confidence</p>
-                <p className="text-sm text-brand-secondary font-black">{estimatedAge || '--'} yrs</p>
+                <p className={`text-sm font-black transition-all ${estimatedAge ? 'text-brand-secondary' : 'text-gray-600 animate-pulse'}`}>
+                  {estimatedAge ? `${estimatedAge} yrs` : 'Scanning...'}
+                </p>
              </div>
              <div className="text-right">
                 <p className="text-[10px] text-gray-500 uppercase font-black">Location Status</p>
@@ -392,12 +394,22 @@ export default function VideoCallPage() {
           </div>
         </div>
         
-        <div className="relative flex-1 bg-black/40 rounded-[48px] overflow-hidden border border-white/5 shadow-2xl group min-h-[400px]">
-           <video 
-             className="w-full h-full object-cover" 
-             ref={el => { remoteVideoRef.current = el; setVideoStream(el, true); }} 
-             autoPlay playsInline muted
-           />
+        <div className="relative flex-1 bg-gradient-to-br from-brand-dark to-black rounded-[48px] overflow-hidden border border-white/5 shadow-2xl group min-h-[400px]">
+           {/* Background Video - Only shown if a remote peer (agent) is connected */}
+           {peers.length > 0 && (
+             <video 
+               className="w-full h-full object-cover" 
+               ref={el => { remoteVideoRef.current = el; setVideoStream(el, true); }} 
+               autoPlay playsInline muted
+             />
+           )}
+           
+           {/* Identity Background Pattern (Shown when alone) */}
+           {peers.length === 0 && (
+             <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+                <ShieldCheck className="w-64 h-64 text-brand-primary" />
+             </div>
+           )}
            
            {/* Local Stage HUD Overlay */}
            <div className="absolute inset-x-0 top-8 flex justify-center px-6 pointer-events-none">
@@ -429,35 +441,33 @@ export default function VideoCallPage() {
               </div>
            </div>
 
-           {/* Local Large Self-View */}
-           <div className="absolute top-8 right-8 w-60 aspect-video rounded-3xl overflow-hidden border-2 border-brand-primary shadow-2xl bg-black">
+           {/* Local Large Self-View (Bottom Right - Compact to avoid overlap) */}
+           <div className="absolute bottom-4 right-4 w-56 aspect-video rounded-[24px] overflow-hidden border-2 border-brand-primary/40 shadow-2xl bg-black group-hover:border-brand-primary transition-all">
               <video 
                 className="w-full h-full object-cover" 
                 ref={el => { localVideoRef.current = el; setVideoStream(el, false); }} 
                 autoPlay playsInline muted 
               />
-              <div className="absolute bottom-2 left-3 bg-brand-primary/80 backdrop-blur-md px-2 py-0.5 rounded-lg">
-                <p className="text-[8px] text-white font-black uppercase">Forensic Stream</p>
+              <div className="absolute bottom-3 left-3 bg-brand-primary/90 backdrop-blur-lg px-2 py-0.5 rounded-full">
+                <p className="text-[8px] text-white font-black uppercase italic tracking-tighter">Live Monitor</p>
               </div>
            </div>
 
-           {/* Call Controls Overlay */}
-           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center space-x-4 bg-black/40 backdrop-blur-xl p-4 rounded-[32px] border border-white/10 opacity-0 group-hover:opacity-100 transition-all duration-300">
-              <button onClick={() => setIsMicOn(!isMicOn)} className={`p-4 rounded-2xl transition-all ${isMicOn ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-red-500 text-white'}`}>
-                {isMicOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-              </button>
-              <button onClick={() => setIsVideoOn(!isVideoOn)} className={`p-4 rounded-2xl transition-all ${isVideoOn ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-red-500 text-white'}`}>
-                {isVideoOn ? <VideoIcon className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
-              </button>
-              <div className="w-px h-8 bg-white/10 mx-2"></div>
+           {/* Locked Call Controls (Mandatory Stream) - Extreme Left Offset */}
+           <div className="absolute bottom-4 left-4 flex items-center space-x-3 bg-black/60 backdrop-blur-xl p-3 rounded-[28px] border border-white/10 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-2xl">
+              <div className="flex items-center space-x-2 px-3 text-brand-secondary opacity-60">
+                 <ShieldCheck className="w-3.5 h-3.5" />
+                 <span className="text-[8px] font-black uppercase tracking-widest leading-none">Mandatory Stream</span>
+              </div>
+              <div className="w-px h-6 bg-white/10 mx-1"></div>
               <button 
                 onClick={() => {if(recognitionRef.current) recognitionRef.current.start(); setIsRecording(true);}}
-                className={`flex items-center space-x-2 px-6 py-4 rounded-2xl font-black uppercase tracking-widest transition-all ${isRecording ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-brand-primary text-white hover:scale-[1.05]'}`}
+                className={`flex items-center space-x-2 px-5 py-3 rounded-2xl font-black uppercase tracking-widest transition-all text-[10px] ${isRecording ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-brand-primary text-white hover:scale-[1.05]'}`}
               >
-                <span>{isRecording ? 'Recording Live' : 'Start Interview'}</span>
+                <span>{isRecording ? 'Recording' : 'Start Interview'}</span>
               </button>
-              <button onClick={() => navigate('/dashboard')} className="p-4 rounded-2xl bg-red-600 text-white hover:bg-red-700 transition-all">
-                <PhoneOff className="w-6 h-6" />
+              <button onClick={() => navigate('/dashboard')} className="p-3 rounded-2xl bg-red-600 text-white hover:bg-red-700 transition-all">
+                <PhoneOff className="w-5 h-5" />
               </button>
            </div>
         </div>
