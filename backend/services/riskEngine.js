@@ -64,18 +64,29 @@ const evaluateRisk = (customerData, llmOutput, bureauData) => {
   }
 
   // 4. Offer Generation based on Score & Requested Amount
-  // We cap the multiplier based on score, but we try to honor the requested amount if it's within capacity
   const multiplier = score / 12;
   const calculatedMax = income * multiplier;
-  
-  // Honor requested amount but don't exceed calculated maximum
   const loan_amount = Math.min(requestedAmount, calculatedMax, 1500000); // Max cap 15L
-  
   const interest_rate = Math.max(7.4, 20 - (score / 8)); // Dynamic interest
   const tenure = score > 80 ? [12, 24, 36, 48, 60] : [12, 24, 36];
 
+  // 5. High Amount Guardrail (> 50,000)
+  if (requestedAmount > 50000) {
+    return {
+      eligible: true,
+      isPendingAdmin: true,
+      status: 'pending_admin',
+      loan_amount: Math.round(loan_amount / 1000) * 1000,
+      interest_rate: parseFloat(interest_rate.toFixed(2)),
+      tenure,
+      reason: `Amount ₹${requestedAmount} exceeds auto-approval threshold. PENDING MANUAL ADMIN REVIEW.`,
+      score
+    };
+  }
+
   return {
     eligible: true,
+    status: 'approved',
     loan_amount: Math.round(loan_amount / 1000) * 1000,
     interest_rate: parseFloat(interest_rate.toFixed(2)),
     tenure,

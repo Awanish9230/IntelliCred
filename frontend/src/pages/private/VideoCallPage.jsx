@@ -6,7 +6,7 @@ import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, 
   Code, Loader2, CheckCircle2, User, Landmark, 
   Briefcase, Fingerprint, Coins, ShieldCheck, ArrowRight,
-  Clock, AlertTriangle
+  Clock, AlertTriangle, MapPin, Home, CreditCard
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -27,36 +27,30 @@ export default function VideoCallPage() {
   const [structuredAnswers, setStructuredAnswers] = useState({});
   
   const aiQuestions = [
-    { id: 'income', q: 'Please state your monthly take-home income and source of salary.', icon: <Coins className="w-5 h-5" /> },
-    { id: 'employer', q: 'Which company are you currently employed with and what is your designation?', icon: <Briefcase className="w-5 h-5" /> },
-    { id: 'tenure', q: 'How long have you been working with your current organization?', icon: <Clock className="w-5 h-5" /> },
-    { id: 'debts', q: 'Do you have any active personal loans, home loans, or car loans?', icon: <Landmark className="w-5 h-5" /> },
-    { id: 'emi', q: 'What is the total EMI amount you pay every month for existing debts?', icon: <Coins className="w-5 h-5" /> },
-    { id: 'purpose', q: 'What is the primary objective or purpose for this specific loan request?', icon: <ShieldCheck className="w-5 h-5" /> },
-    { id: 'residence', q: 'Is your current residence owned by you or is it a rented property?', icon: <User className="w-5 h-5" /> },
-    { id: 'dependents', q: 'How many dependents or family members are currently supported by your income?', icon: <User className="w-5 h-5" /> },
-    { id: 'city', q: 'In which city are you currently residing?', icon: <Landmark className="w-5 h-5" /> },
-    { id: 'native', q: 'Where is your permanent native place according to your records?', icon: <Landmark className="w-5 h-5" /> },
-    { id: 'bank', q: 'Which bank do you use as your primary account for salary credits?', icon: <Landmark className="w-5 h-5" /> },
-    { id: 'salary_date', q: 'On which date of the month is your salary usually credited?', icon: <Clock className="w-5 h-5" /> },
-    { id: 'other_income', q: 'Do you have any side business or additional sources of income?', icon: <Coins className="w-5 h-5" /> },
-    { id: 'tenure_target', q: 'What is the expected tenure (months) you are looking for this loan?', icon: <Clock className="w-5 h-5" /> },
-    { id: 'history', q: 'Have you ever defaulted on any loan or credit card in the last 2 years?', icon: <ShieldCheck className="w-5 h-5" /> },
-    { id: 'auto_debit', q: 'Are you comfortable with automatic EMI deduction from your salary account?', icon: <CheckCircle2 className="w-5 h-5" /> },
-    { id: 'emergency', q: 'In case of an emergency, who would be your primary point of contact?', icon: <User className="w-5 h-5" /> },
-    { id: 'ref_name', q: 'Please state the name of a professional reference from your company.', icon: <User className="w-5 h-5" /> },
-    { id: 'ref_relation', q: 'What is your relationship with the professional reference you provided?', icon: <User className="w-5 h-5" /> },
-    { id: 'intelli_choice', q: 'Why did you choose IntelliCred for your credit requirements today?', icon: <ShieldCheck className="w-5 h-5" /> },
+    // STAGE 1: IDENTITY PROOFING
+    { id: 'identity_verify', q: 'For the forensic record, please state your full legal name and current age.', icon: <User className="w-5 h-5" /> },
+    { id: 'mobile_verify', q: 'Is the mobile number provided during sign-up your primary active number linked to your bank?', icon: <ShieldCheck className="w-5 h-5" /> },
     { id: 'id_confirm', q: 'Can you confirm that the ID document you uploaded belongs solely to you?', icon: <Fingerprint className="w-5 h-5" /> },
+
+    // STAGE 2: DOCUMENT REVIEW
+    { id: 'native_place', q: 'Where is your native place, and do you have any other residency Proof?', icon: <MapPin className="w-5 h-5" /> },
+    { id: 'city_locate', q: 'Which city are you currently residing in, and what is your specific locality?', icon: <Landmark className="w-5 h-5" /> },
+    { id: 'loc_work_home', q: 'Are you currently at your home or workplace for this video interview?', icon: <Home className="w-5 h-5" /> },
+
+    // STAGE 3: INCOME DECLARATION
+    { id: 'monthly_income', q: 'Please state your monthly take-home income and your primary source of salary.', icon: <Coins className="w-5 h-5" /> },
+    { id: 'debts_check', q: 'Do you have any existing loans or EMIs that you are currently paying?', icon: <Landmark className="w-5 h-5" /> },
+    { id: 'emi_comfort', q: 'What is the maximum monthly EMI you can comfortably afford for this new loan?', icon: <Coins className="w-5 h-5" /> },
+
+    // STAGE 4: EMPLOYMENT PROOF
+    { id: 'employer_name', q: 'Which company are you currently employed with and what is your designation?', icon: <Briefcase className="w-5 h-5" /> },
+    { id: 'work_tenure', q: 'How long have you been working with your current organization?', icon: <Clock className="w-5 h-5" /> },
+    { id: 'office_loc', q: 'Where is your office located, and is it currently operating from an office or remotely?', icon: <MapPin className="w-5 h-5" /> },
+
+    // STAGE 5: LEGAL CONSENT
+    { id: 'bureau_consent', q: 'Do you grant us permission to fetch your credit score from the bureau for evaluation?', icon: <ShieldCheck className="w-5 h-5" /> },
     { id: 'data_truth', q: 'Do you solemnly declare that all information shared today is 100% accurate?', icon: <ShieldCheck className="w-5 h-5" /> },
-    { id: 'bureau_consent', q: 'Do you grant us permission to fetch your credit score from the bureau?', icon: <ShieldCheck className="w-5 h-5" /> },
-    { id: 'recording_consent', q: 'Do you consent to this video being recorded for forensic audit purposes?', icon: <ShieldCheck className="w-5 h-5" /> },
-    { id: 'final_verification', q: 'Please look directly into the camera and state your full name for the record.', icon: <User className="w-5 h-5" /> },
-    { id: 'location_check', q: 'Are you currently at your workplace or your residence?', icon: <Landmark className="w-5 h-5" /> },
-    { id: 'mobile_verify', q: 'Is the mobile number provided during sign-up your primary active number?', icon: <ShieldCheck className="w-5 h-5" /> },
-    { id: 'fraud_vow', q: 'Do you understand that any fraudulent declaration may lead to legal action?', icon: <AlertTriangle className="w-5 h-5" /> },
-    { id: 'digital_sign', q: 'Do you agree to use your video declaration as a digital signature proxy?', icon: <Fingerprint className="w-5 h-5" /> },
-    { id: 'interview_close', q: 'Is there anything else you would like to clarify before we close this interview?', icon: <CheckCircle2 className="w-5 h-5" /> },
+    { id: 'recording_consent', q: 'Do you consent to this video being recorded for forensic audit purposes?', icon: <ShieldCheck className="w-5 h-5" /> }
   ];
 
   // States for UI
@@ -80,10 +74,10 @@ export default function VideoCallPage() {
   const isRecordingRef = useRef(false); // Ref to track recording state across effect turns
 
   const interviewSteps = [
-    { id: 'identity', label: 'Face Match & Identity', icon: <User className="w-4 h-4" />, status: docVerification ? 'completed' : 'pending' },
-    { id: 'docs', label: 'Document Review', icon: <Fingerprint className="w-4 h-4" />, status: docVerification ? 'completed' : 'pending' },
-    { id: 'income', label: 'Income Declaration', icon: <Landmark className="w-4 h-4" />, status: structuredAnswers['income'] ? 'completed' : 'pending' },
-    { id: 'employment', label: 'Employment Proof', icon: <Briefcase className="w-4 h-4" />, status: structuredAnswers['employer'] ? 'completed' : 'pending' },
+    { id: 'identity', label: 'Face Match & Identity', icon: <User className="w-4 h-4" />, status: structuredAnswers['identity_verify'] ? 'completed' : 'pending' },
+    { id: 'docs', label: 'Document Review', icon: <Fingerprint className="w-4 h-4" />, status: structuredAnswers['native_place'] ? 'completed' : 'pending' },
+    { id: 'income', label: 'Income Declaration', icon: <Landmark className="w-4 h-4" />, status: structuredAnswers['monthly_income'] ? 'completed' : 'pending' },
+    { id: 'employment', label: 'Employment Proof', icon: <Briefcase className="w-4 h-4" />, status: structuredAnswers['employer_name'] ? 'completed' : 'pending' },
     { id: 'consent', label: 'Legal Consent', icon: <CheckCircle2 className="w-4 h-4" />, status: consentDetected ? 'completed' : 'pending' }
   ];
 
@@ -187,7 +181,8 @@ export default function VideoCallPage() {
 
     // 2. Stable Age Detection (Simulated Forensic Match)
     const ageInterval = setInterval(() => {
-       if (isVideoOn && isRecording) {
+       // Use the ref to avoid stale closure issues during the interview session
+       if (isVideoOn && isRecordingRef.current) {
           // If we have doc verification, use a stable age based on it
           const savedDoc = JSON.parse(localStorage.getItem('doc_verification') || '{}');
           if (savedDoc.verification_status === 'SUCCESS') {
@@ -227,20 +222,15 @@ export default function VideoCallPage() {
     }
   }, [isRecording]);
 
-  // Robust Stream Assignment Helper
-  const setVideoStream = (el, isRemote = false) => {
-    if (el && stream) {
-       // If no peers are connected, mirroring local stream to the large stage
-       if (isRemote && peers.length === 0) {
-          el.srcObject = stream;
-       } else if (!isRemote) {
-          el.srcObject = stream;
-       }
-       
-       // Ensure play starts
-       el.play().catch(e => console.error("Auto-play failed:", e));
+  // Robust Stream Assignment (Persistent & Non-Flickering)
+  useEffect(() => {
+    if (localVideoRef.current && stream) {
+      if (localVideoRef.current.srcObject !== stream) {
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(e => console.error("Local play failed:", e));
+      }
     }
-  };
+  }, [stream, peers.length]);
 
   const purgeSessionPrivacy = () => {
     console.log('STRICT PRIVACY ENFORCED: Purging media and permissions...');
@@ -278,8 +268,8 @@ export default function VideoCallPage() {
     const currentQId = aiQuestions[currentQuestionIndex].id;
     const currentAnswer = structuredAnswers[currentQId] || '';
 
-    // Clarity Check: If answer is too short, ask for clarification
-    if (currentAnswer.trim().length < 25 && !isClarifying) {
+    // Clarity Check: If answer is too short, ask for clarification (Optimized to 10 chars)
+    if (currentAnswer.trim().length < 10 && !isClarifying) {
       setIsClarifying(true);
       toast('Can you please provide more details on that?', { icon: '🤔', duration: 3000 });
       return; 
@@ -405,82 +395,69 @@ export default function VideoCallPage() {
           </div>
         </div>
         
-        <div className="relative flex-1 bg-gradient-to-br from-brand-dark to-black rounded-[48px] overflow-hidden border border-white/5 shadow-2xl group min-h-[400px]">
-           {/* Background Video - Only shown if a remote peer (agent) is connected */}
-           {peers.length > 0 && (
-             <video 
-               className="w-full h-full object-cover" 
-               ref={el => { remoteVideoRef.current = el; setVideoStream(el, true); }} 
-               autoPlay playsInline muted
-             />
-           )}
-           
-           {/* Identity Background Pattern (Shown when alone) */}
-           {peers.length === 0 && (
-             <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-                <ShieldCheck className="w-64 h-64 text-brand-primary" />
-             </div>
-           )}
-           
-           {/* Local Stage HUD Overlay */}
-           <div className="absolute inset-x-0 top-8 flex justify-center px-6 pointer-events-none">
-              <div className="max-w-xl w-full pointer-events-auto">
-                 <div className="glass-panel p-6 rounded-[32px] bg-brand-dark/80 border-brand-secondary/30 backdrop-blur-xl transition-all hover:scale-[1.01]">
-                    <div className="flex items-center justify-between mb-4">
-                       <div className="flex items-center space-x-3 text-brand-secondary">
-                          {aiQuestions[currentQuestionIndex].icon}
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Phase {currentQuestionIndex + 1}</span>
-                       </div>
-                       <div className="flex items-center space-x-2">
-                          <div className={`w-2 h-2 rounded-full ${isSpeaking ? 'bg-green-500 animate-ping' : 'bg-red-500 animate-pulse'}`}></div>
-                          <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">{isSpeaking ? 'Listening...' : 'Awaiting Input'}</span>
-                       </div>
-                    </div>
-                    <h3 className="text-lg font-bold text-white italic leading-tight mb-4">
-                       {aiQuestions[currentQuestionIndex].q}
-                    </h3>
-                    <div className="flex items-center justify-end">
-                       <button 
-                         onClick={handleNextQuestion}
-                         className="bg-brand-primary text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center space-x-2"
-                       >
-                         <span>Next Question</span>
-                         <ArrowRight className="w-3 h-3" />
-                       </button>
-                    </div>
-                 </div>
-              </div>
-           </div>
+        <div className="relative flex-1 bg-gradient-to-br from-brand-dark to-black rounded-[48px] overflow-hidden border border-white/5 shadow-2xl group min-h-[400px] flex items-center justify-center transition-all bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-brand-primary/5 via-transparent to-transparent">
+            {/* Stylized Forensic Stage Background (Ambient only) */}
+            <Fingerprint className="w-96 h-96 text-brand-primary opacity-5 animate-pulse select-none pointer-events-none" />
+            
+            {/* Local Stage HUD Overlay */}
+            <div className="absolute inset-x-0 top-8 flex justify-center px-6 pointer-events-none">
+               <div className="max-w-xl w-full pointer-events-auto">
+                  <div className="glass-panel p-6 rounded-[32px] bg-brand-dark/80 border-brand-secondary/30 backdrop-blur-xl transition-all hover:scale-[1.01]">
+                     <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-3 text-brand-secondary">
+                           {aiQuestions[currentQuestionIndex].icon}
+                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Phase {currentQuestionIndex + 1}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                           <div className={`w-2 h-2 rounded-full ${isSpeaking ? 'bg-green-500 animate-ping' : 'bg-red-500 animate-pulse'}`}></div>
+                           <span className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">{isSpeaking ? 'Listening...' : 'Awaiting Input'}</span>
+                        </div>
+                     </div>
+                     <h3 className="text-lg font-bold text-white italic leading-tight mb-4">
+                        {aiQuestions[currentQuestionIndex].q}
+                     </h3>
+                     <div className="flex items-center justify-end">
+                        <button 
+                          onClick={handleNextQuestion}
+                          className="bg-brand-primary text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center space-x-2"
+                        >
+                          <span>Next Question</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                     </div>
+                  </div>
+               </div>
+            </div>
 
-           {/* Local Large Self-View (Bottom Right - Compact to avoid overlap) */}
-           <div className="absolute bottom-4 right-4 w-56 aspect-video rounded-[24px] overflow-hidden border-2 border-brand-primary/40 shadow-2xl bg-black group-hover:border-brand-primary transition-all">
-              <video 
-                className="w-full h-full object-cover" 
-                ref={el => { localVideoRef.current = el; setVideoStream(el, false); }} 
-                autoPlay playsInline muted 
-              />
-              <div className="absolute bottom-3 left-3 bg-brand-primary/90 backdrop-blur-lg px-2 py-0.5 rounded-full">
-                <p className="text-[8px] text-white font-black uppercase italic tracking-tighter">Live Monitor</p>
-              </div>
-           </div>
+            {/* Local Large Self-View (Bottom Right - Compact to avoid overlap) */}
+            <div className="absolute bottom-4 right-4 w-56 aspect-video rounded-[24px] overflow-hidden border-2 border-brand-primary/40 shadow-2xl bg-black group-hover:border-brand-primary transition-all">
+               <video 
+                 className="w-full h-full object-cover" 
+                 ref={localVideoRef} 
+                 autoPlay playsInline muted 
+               />
+               <div className="absolute bottom-3 left-3 bg-brand-primary/90 backdrop-blur-lg px-2 py-0.5 rounded-full">
+                 <p className="text-[8px] text-white font-black uppercase italic tracking-tighter">Live Monitor</p>
+               </div>
+            </div>
 
-           {/* Locked Call Controls (Mandatory Stream) - Extreme Left Offset */}
-           <div className="absolute bottom-4 left-4 flex items-center space-x-3 bg-black/60 backdrop-blur-xl p-3 rounded-[28px] border border-white/10 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-2xl">
-              <div className="flex items-center space-x-2 px-3 text-brand-secondary opacity-60">
-                 <ShieldCheck className="w-3.5 h-3.5" />
-                 <span className="text-[8px] font-black uppercase tracking-widest leading-none">Mandatory Stream</span>
-              </div>
-              <div className="w-px h-6 bg-white/10 mx-1"></div>
-              <button 
-                onClick={() => {if(recognitionRef.current) recognitionRef.current.start(); setIsRecording(true);}}
-                className={`flex items-center space-x-2 px-5 py-3 rounded-2xl font-black uppercase tracking-widest transition-all text-[10px] ${isRecording ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-brand-primary text-white hover:scale-[1.05]'}`}
-              >
-                <span>{isRecording ? 'Recording' : 'Start Interview'}</span>
-              </button>
-              <button onClick={() => navigate('/dashboard')} className="p-3 rounded-2xl bg-red-600 text-white hover:bg-red-700 transition-all">
-                <PhoneOff className="w-5 h-5" />
-              </button>
-           </div>
+            {/* Locked Call Controls (Mandatory Stream) - Extreme Left Offset */}
+            <div className="absolute bottom-4 left-4 flex items-center space-x-3 bg-black/60 backdrop-blur-xl p-3 rounded-[28px] border border-white/10 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-2xl">
+               <div className="flex items-center space-x-2 px-3 text-brand-secondary opacity-60">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span className="text-[8px] font-black uppercase tracking-widest leading-none">Mandatory Stream</span>
+               </div>
+               <div className="w-px h-6 bg-white/10 mx-1"></div>
+               <button 
+                 onClick={() => {if(recognitionRef.current) recognitionRef.current.start(); setIsRecording(true);}}
+                 className={`flex items-center space-x-2 px-5 py-3 rounded-2xl font-black uppercase tracking-widest transition-all text-[10px] ${isRecording ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-brand-primary text-white hover:scale-[1.05]'}`}
+               >
+                 <span>{isRecording ? 'Recording' : 'Start Interview'}</span>
+               </button>
+               <button onClick={() => navigate('/dashboard')} className="p-3 rounded-2xl bg-red-600 text-white hover:bg-red-700 transition-all">
+                 <PhoneOff className="w-5 h-5" />
+               </button>
+            </div>
         </div>
       </div>
 

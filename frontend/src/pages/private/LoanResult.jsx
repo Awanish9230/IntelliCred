@@ -40,15 +40,25 @@ export default function LoanResult() {
           </div>
 
           <h1 className="text-5xl font-bold text-white mb-4">
-            {decision.eligible ? 'Congratulations!' : 'Application Update'}
+            {decision.status === 'pending_admin' ? 'Security Review' : decision.eligible ? 'Congratulations!' : 'Application Update'}
           </h1>
           <p className="text-xl text-gray-400 mb-12 max-w-xl mx-auto">
-            {decision.eligible 
-              ? 'Your video verification was successful. You have been pre-approved for a loan offer.' 
+            {decision.status === 'pending_admin' 
+              ? 'Your high-value loan request is now undergoing final manual verification by our forensic team.' 
+              : decision.eligible 
+              ? 'Your video verification was successful. Your loan amount will be credited to your account within 24 to 48 hours.' 
               : 'Our AI engine has identified some risks that prevent us from offering a loan at this time.'}
           </p>
 
-          {decision.eligible ? (
+          {decision.status === 'pending_admin' ? (
+             <div className="bg-orange-500/5 p-10 rounded-[40px] border border-orange-500/20 mb-12 text-center">
+                <ShieldAlert className="w-16 h-16 text-orange-400 mx-auto mb-6 animate-pulse" />
+                <h4 className="text-white text-xl font-bold mb-2">Awaiting Final Clearance</h4>
+                <p className="text-gray-400 text-sm max-w-md mx-auto">
+                   Due to the requested amount being greater than ₹50,000, our system requires a secondary human audit for safety. This usually takes less than 4 hours.
+                </p>
+             </div>
+          ) : decision.eligible ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
                <div className="bg-white/5 p-8 rounded-3xl border border-white/5">
                   <span className="text-xs text-gray-500 uppercase font-bold tracking-widest block mb-2">Approved Amount</span>
@@ -70,7 +80,11 @@ export default function LoanResult() {
           )}
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            {decision.eligible ? (
+            {decision.status === 'pending_admin' ? (
+               <Link to="/dashboard" className="bg-brand-primary text-white px-10 py-5 rounded-2xl font-bold transition-all hover:scale-105">
+                 Track in Dashboard
+               </Link>
+            ) : decision.eligible ? (
               <>
                 <button className="w-full sm:w-auto bg-brand-primary hover:bg-indigo-600 text-white px-10 py-5 rounded-2xl font-bold flex items-center justify-center space-x-3 transition-all hover:scale-105">
                   <Download className="w-5 h-5" />

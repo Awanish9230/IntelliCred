@@ -101,4 +101,24 @@ router.delete('/logs/:id', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
+router.patch('/logs/:id/decision', verifyToken, isAdmin, async (req, res) => {
+    try {
+      const { status, eligible } = req.body;
+      const log = await AuditLog.findById(req.params.id);
+      if (!log) return res.status(404).json({ success: false, error: 'Log not found' });
+      
+      // Update decision
+      log.decision = { 
+        ...log.decision, 
+        status: status || log.decision.status,
+        eligible: eligible !== undefined ? eligible : log.decision.eligible
+      };
+      
+      await log.save();
+      res.json({ success: true, message: 'Loan status updated by admin', log });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to update decision' });
+    }
+});
+
 module.exports = router;

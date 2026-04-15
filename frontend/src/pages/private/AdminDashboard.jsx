@@ -174,9 +174,44 @@ export default function AdminDashboard() {
     }
   };
 
+  const rejectLoan = async (id) => {
+    if (!window.confirm('Are you sure you want to REJECT this previously approved loan? This action is forensic and final.')) return;
+    try {
+      const res = await fetch(`${apiUrl}/admin/logs/${id}/decision`, { 
+        method: 'PATCH', 
+        headers,
+        body: JSON.stringify({ eligible: false, status: 'rejected' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Loan rejected by Administrative Override');
+        setLogs(logs.map(l => l._id === id ? { ...l, decision: { ...l.decision, eligible: false, status: 'rejected' } } : l));
+      }
+    } catch (err) {
+      toast.error('Rejection failed');
+    }
+  };
+
+  const approvePendingLoan = async (id) => {
+    try {
+      const res = await fetch(`${apiUrl}/admin/logs/${id}/decision`, { 
+        method: 'PATCH', 
+        headers,
+        body: JSON.stringify({ eligible: true, status: 'approved' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('High-value loan approved');
+        setLogs(logs.map(l => l._id === id ? { ...l, decision: { ...l.decision, eligible: true, status: 'approved' } } : l));
+      }
+    } catch (err) {
+      toast.error('Approval failed');
+    }
+  };
+
   const filteredLogs = logs.filter(l => 
     l.sessionId.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (l.decision?.eligible ? 'approved' : 'rejected').includes(searchQuery.toLowerCase())
+    (l.decision?.status || (l.decision?.eligible ? 'approved' : 'rejected')).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -318,8 +353,8 @@ export default function AdminDashboard() {
                          <tr className="bg-white/[0.02] text-gray-500 text-[10px] font-black uppercase tracking-[0.25em] border-b border-white/5">
                            <th className="px-8 py-6">Session ID</th>
                            <th className="p-6">Timestamp</th>
-                           <th className="p-6 text-center">Age Est.</th>
-                           <th className="p-6 text-center">Bureau Score</th>
+                           <th className="p-6 text-center">Amount</th>
+                           <th className="p-6 text-center">Bureau</th>
                            <th className="p-6">Status</th>
                            <th className="px-8 py-6 text-right">Actions</th>
                          </tr>
@@ -329,14 +364,14 @@ export default function AdminDashboard() {
                            <tr key={log._id} className="hover:bg-white/[0.02] transition-colors group">
                              <td className="px-8 py-6">
                                <div className="flex items-center space-x-3">
-                                  <div className="w-2 h-2 rounded-full bg-brand-primary"></div>
-                                  <span className="font-mono text-xs text-gray-300">{log.sessionId.substring(0, 16)}...</span>
+                                  <div className={`w-2 h-2 rounded-full ${log.decision?.status === 'pending_admin' ? 'bg-orange-500 animate-pulse' : 'bg-brand-primary'}`}></div>
+                                  <span className="font-mono text-xs text-gray-300">{log.sessionId.substring(log.sessionId.length - 12)}</span>
                                </div>
                              </td>
                              <td className="p-6 text-sm text-gray-400">{new Date(log.createdAt).toLocaleString()}</td>
                              <td className="p-6 text-center">
-                               <span className="text-sm font-bold text-gray-300">
-                                 {log.ageEstimate || 'N/A'}
+                               <span className="text-sm font-black text-white italic">
+                                 ₹{log.requestedAmount?.toLocaleString() || 'N/A'}
                                </span>
                              </td>
                              <td className="p-6 text-center">
@@ -344,32 +379,46 @@ export default function AdminDashboard() {
                                  <span className={`text-sm font-black ${log.bureauData?.credit_score > 700 ? 'text-green-400' : 'text-orange-400'}`}>
                                    {log.bureauData?.credit_score || '---'}
                                  </span>
-                                 <span className="text-[8px] text-gray-500 uppercase font-black uppercase">FICO Mock</span>
+                                 <span className="text-[8px] text-gray-500 uppercase font-black">Audit FICO</span>
                                </div>
                              </td>
                              <td className="p-6">
-                               <div className={`flex items-center space-x-2 text-xs font-bold ${log.decision?.eligible ? 'text-green-400' : 'text-red-400'}`}>
-                                  {log.decision?.eligible ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                                  <span>{log.decision?.eligible ? 'Approved' : 'Rejected'}</span>
+                               <div className={`flex items-center space-x-2 text-xs font-bold ${
+                                 log.decision?.status === 'pending_admin' ? 'text-orange-400' : 
+                                 log.decision?.eligible ? 'text-green-400' : 'text-red-400'
+                               }`}>
+                                  {log.decision?.status === 'pending_admin' ? <ShieldAlert className="w-4 h-4 animation-pulse" /> : 
+                                   log.decision?.eligible ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                                  <span>{log.decision?.status === 'pending_admin' ? 'Pending Admin' : log.decision?.eligible ? 'Approved' : 'Rejected'}</span>
                                </div>
                              </td>
                              <td className="px-8 py-6 text-right">
                                <div className="flex items-center justify-end space-x-2">
+                                 {log.decision?.status === 'pending_admin' && (
+                                   <button 
+                                     onClick={() => approvePendingLoan(log._id)}
+                                     className="px-4 py-2 rounded-xl bg-brand-primary text-white text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                                   >
+                                     Approve
+                                   </button>
+                                 )}
                                  <button 
                                    onClick={() => viewTranscript(log.sessionId)}
-                                   className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-brand-primary hover:bg-brand-primary/10 transition-all"
+                                   className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-brand-primary hover:bg-brand-primary/10 transition-all border border-white/5"
                                    title="View Transcript"
                                  >
                                    <MessageSquare className="w-5 h-5" />
                                  </button>
-                                 <button 
-                                   onClick={() => { setSelectedIdImage(log.idDocumentImage); setShowIdModal(true); }}
-                                   className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-brand-secondary hover:bg-brand-secondary/10 transition-all"
-                                   title="View ID Document"
-                                 >
-                                   <ShieldCheck className="w-5 h-5" />
-                                 </button>
-                                 <button className="p-3 rounded-xl bg-white/5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100">
+                                 {log.decision?.eligible && log.decision?.status !== 'rejected' && (
+                                   <button 
+                                     onClick={() => rejectLoan(log._id)}
+                                     className="p-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                                     title="Reject / Override"
+                                   >
+                                     <XCircle className="w-5 h-5" />
+                                   </button>
+                                 )}
+                                 <button onClick={() => deleteUser(log._id)} className="p-3 rounded-xl bg-white/5 text-gray-700 hover:text-red-500 transition-all opacity-20 hover:opacity-100">
                                    <Trash2 className="w-5 h-5" />
                                  </button>
                                </div>
