@@ -500,37 +500,44 @@ export default function VideoCallPage() {
               </div>
            </div>
 
-           {/* Loan Amount Input Step - Ultra Minimalist */}
-           <div className="bg-white/5 p-3 rounded-2xl border border-white/10">
-              <div className="space-y-1.5">
-                 <div className="flex items-center space-x-1.5 text-brand-secondary opacity-70">
-                    <Coins className="w-3 h-3" />
-                    <span className="text-[8px] font-black uppercase tracking-widest leading-none">Loan Amount</span>
+           {/* ACTION CARD: Harmonized Height Row */}
+           <div className="mt-auto bg-black/40 p-4 rounded-[24px] border border-white/5 shadow-inner">
+              <div className="flex items-end justify-between gap-4">
+                 <div className="flex-1">
+                    <div className="flex items-center space-x-1.5 text-brand-secondary opacity-70 mb-2">
+                       <Coins className="w-3 h-3" />
+                       <span className="text-[8px] font-black uppercase tracking-widest">Loan Amount</span>
+                    </div>
+                    <div className="relative h-[44px]">
+                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-500">₹</span>
+                       <input 
+                         type="number"
+                         placeholder="0"
+                         value={targetLoanAmount}
+                         onChange={(e) => setTargetLoanAmount(e.target.value)}
+                         className="w-full h-full bg-white/5 border border-white/10 rounded-xl py-0 pl-7 pr-2 text-sm font-black text-white focus:outline-none focus:border-brand-primary"
+                       />
+                    </div>
                  </div>
-                 <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400">₹</span>
-                    <input 
-                      type="number"
-                      placeholder="0.00"
-                      value={targetLoanAmount}
-                      onChange={(e) => setTargetLoanAmount(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-md py-1.5 pl-6 pr-2 text-sm font-black text-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                    />
-                 </div>
+                 
+                 <button 
+                   onClick={processApplication}
+                   disabled={processingState === 'analyzing' || !isRecording || answeredCount < 10}
+                   className="h-[44px] px-8 rounded-xl bg-brand-secondary text-brand-dark font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 text-[10px] shadow-lg whitespace-nowrap"
+                 >
+                   {processingState === 'analyzing' ? '...' : 'Freeze & Submit'}
+                 </button>
               </div>
+              {answeredCount < 10 && (
+                <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-2.5 text-center">
+                  Unlock after 10 questions
+                </p>
+              )}
            </div>
-
-           <button 
-             onClick={processApplication}
-             disabled={processingState === 'analyzing' || !isRecording || answeredCount < 10}
-             className="w-full mt-2 py-2 rounded-md bg-brand-secondary text-brand-dark font-black uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 text-[9px] shadow-sm"
-           >
-             {processingState === 'analyzing' ? 'Processing...' : 'Freeze & Submit'}
-           </button>
         </div>
 
         {/* Live Logs Bottom (Condensed) */}
-        <div className="glass-panel p-6 rounded-[32px] h-48 border-white/5 flex flex-col">
+        <div className="glass-panel p-4 rounded-[24px] h-32 border-white/5 flex flex-col">
            <h4 className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-3">Auditable Stream</h4>
            <div className="flex-1 bg-black/40 rounded-2xl p-4 overflow-y-auto custom-scrollbar">
               <p className="text-[11px] font-mono text-gray-300 leading-relaxed italic">
