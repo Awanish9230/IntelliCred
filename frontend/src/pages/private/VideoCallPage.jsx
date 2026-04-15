@@ -500,21 +500,21 @@ export default function VideoCallPage() {
               </div>
            </div>
 
-           {/* Loan Amount Input Step */}
-           <div className="bg-white/5 p-6 rounded-3xl border border-white/5">
-              <div className="space-y-4">
-                 <div className="flex items-center space-x-2 text-brand-secondary">
-                    <Coins className="w-5 h-5" />
-                    <span className="text-xs font-black uppercase tracking-widest">Requested Loan Amount</span>
+           {/* Loan Amount Input Step - Ultra Minimalist */}
+           <div className="bg-white/5 p-3 rounded-2xl border border-white/10">
+              <div className="space-y-1.5">
+                 <div className="flex items-center space-x-1.5 text-brand-secondary opacity-70">
+                    <Coins className="w-3 h-3" />
+                    <span className="text-[8px] font-black uppercase tracking-widest leading-none">Loan Amount</span>
                  </div>
                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-gray-500">₹</span>
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400">₹</span>
                     <input 
                       type="number"
                       placeholder="0.00"
                       value={targetLoanAmount}
                       onChange={(e) => setTargetLoanAmount(e.target.value)}
-                      className="w-full bg-black/20 border border-white/10 rounded-2xl py-4 pl-10 pr-4 text-2xl font-black text-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      className="w-full bg-black/40 border border-white/10 rounded-md py-1.5 pl-6 pr-2 text-sm font-black text-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
                     />
                  </div>
               </div>
@@ -523,9 +523,9 @@ export default function VideoCallPage() {
            <button 
              onClick={processApplication}
              disabled={processingState === 'analyzing' || !isRecording || answeredCount < 10}
-             className="w-full mt-6 py-5 rounded-[24px] bg-brand-secondary text-brand-dark font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-2xl shadow-brand-secondary/20"
+             className="w-full mt-2 py-2 rounded-md bg-brand-secondary text-brand-dark font-black uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 text-[9px] shadow-sm"
            >
-             {processingState === 'analyzing' ? 'Processing Final Verdict...' : 'Freeze & Submit'}
+             {processingState === 'analyzing' ? 'Processing...' : 'Freeze & Submit'}
            </button>
         </div>
 
