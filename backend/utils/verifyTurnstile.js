@@ -16,6 +16,7 @@ const verifyTurnstile = async (token) => {
     });
 
     const data = await response.json();
+    console.log('Turnstile verification response:', data); // Add this log to help debugging
     return data.success;
   } catch (err) {
     console.error('Error verifying Turnstile:', err);
