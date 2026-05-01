@@ -37,7 +37,7 @@ export default function Contact() {
               </div>
               <div>
                 <h4 className="text-white font-bold">Email Us</h4>
-                <p className="text-gray-400">support@intellicred.ai</p>
+                <p className="text-gray-400">awanishverma864@gmail.com</p>
               </div>
             </div>
 
@@ -47,7 +47,7 @@ export default function Contact() {
               </div>
               <div>
                 <h4 className="text-white font-bold">Call Support</h4>
-                <p className="text-gray-400">+1 (555) 123-4567</p>
+                <p className="text-gray-400">7390083864</p>
               </div>
             </div>
 
@@ -57,7 +57,7 @@ export default function Contact() {
               </div>
               <div>
                 <h4 className="text-white font-bold">HQ Office</h4>
-                <p className="text-gray-400">Silicon Valley, CA, USA</p>
+                <p className="text-gray-400">Ghaziabad Uttar Pradesh</p>
               </div>
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function Contact() {
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all text-white"
-                placeholder="john@company.com"
+                placeholder="john@intellicred.com"
               />
             </div>
 

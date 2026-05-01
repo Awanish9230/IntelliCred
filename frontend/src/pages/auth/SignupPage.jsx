@@ -99,7 +99,7 @@ export default function SignupPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   className="w-full bg-black/30 border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all text-white"
-                  placeholder="name@company.com"
+                  placeholder="name@intellicred.com"
                 />
               </div>
             </div>

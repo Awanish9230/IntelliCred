@@ -5,8 +5,12 @@ export default function TurnstileWidget({ onVerify }) {
   const widgetIdRef = useRef(null);
 
   useEffect(() => {
-    // For local dev/testing if env var is missing, use Cloudflare's dummy test key that always passes
-    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    
+    if (!siteKey) {
+      console.error('VITE_TURNSTILE_SITE_KEY is missing! Turnstile CAPTCHA will not load in production.');
+      return;
+    }
 
     const renderWidget = () => {
       if (window.turnstile && containerRef.current && !widgetIdRef.current) {
