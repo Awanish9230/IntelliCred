@@ -3,22 +3,27 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Mail, Lock, LogIn, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import TurnstileWidget from '../../components/common/TurnstileWidget';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [unverified, setUnverified] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setUnverified(false);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL;
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
       const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, turnstileToken })
       });
       const data = await response.json();
       if (data.success) {
@@ -31,11 +36,36 @@ export default function LoginPage() {
         }
       } else {
         toast.error(data.error || 'Invalid credentials');
+        if (data.isVerified === false) {
+          setUnverified(true);
+        }
       }
     } catch (err) {
       toast.error('Connection failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+      const response = await fetch(`${apiUrl}/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Verification email sent! Please check your inbox.');
+      } else {
+        toast.error(data.error || 'Failed to resend email');
+      }
+    } catch (err) {
+      toast.error('Connection failed');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -69,7 +99,10 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300 ml-1">Password</label>
+              <div className="flex items-center justify-between ml-1 pr-1">
+                <label className="text-sm font-medium text-gray-300">Password</label>
+                <Link to="/forgot-password" className="text-xs text-brand-secondary hover:underline">Forgot password?</Link>
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
                   <Lock className="w-5 h-5" />
@@ -85,15 +118,30 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <TurnstileWidget onVerify={setTurnstileToken} />
+
             <button 
               type="submit" 
-              disabled={loading}
+              disabled={loading || !turnstileToken}
               className="w-full bg-brand-primary hover:bg-indigo-600 font-bold py-4 rounded-2xl transition-all shadow-xl flex items-center justify-center space-x-2 disabled:opacity-50"
             >
               <LogIn className="w-5 h-5" />
               <span>{loading ? 'Authenticating...' : 'Sign In Now'}</span>
             </button>
           </form>
+
+          {unverified && (
+            <div className="mt-4 p-4 bg-red-900/30 border border-red-500/30 rounded-xl text-center">
+              <p className="text-red-400 text-sm mb-3">Your email is not verified.</p>
+              <button 
+                onClick={handleResend}
+                disabled={resending}
+                className="text-sm font-medium text-white bg-red-600 hover:bg-red-700 py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {resending ? 'Sending...' : 'Resend Verification Email'}
+              </button>
+            </div>
+          )}
 
           <div className="mt-8 text-center border-t border-white/5 pt-6">
             <p className="text-sm text-gray-500">

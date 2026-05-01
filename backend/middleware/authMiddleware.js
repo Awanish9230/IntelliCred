@@ -11,6 +11,9 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.isVerified === false) {
+      return res.status(403).json({ success: false, error: 'Access denied. Please verify your email.' });
+    }
     req.user = decoded;
     next();
   } catch (ex) {
