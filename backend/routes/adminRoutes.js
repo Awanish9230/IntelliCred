@@ -14,30 +14,48 @@ router.get('/stats', verifyToken, isAdmin, async (req, res) => {
     const totalApplications = await AuditLog.countDocuments();
     
     const logs = await AuditLog.find();
-    const approved = logs.filter(l => l.decision?.eligible).length;
+
+    // ── Approval metrics (use explicit status for consistency)
+    const approvedLogs = logs.filter(l => l.decision?.status === 'approved');
+    const approved = approvedLogs.length;
     const approvalRate = totalApplications > 0 ? ((approved / totalApplications) * 100).toFixed(1) : 0;
 
-    const totalLoanAmount = logs.reduce((sum, l) => sum + (l.decision?.loan_amount || 0), 0);
-    const avgLoan = totalApplications > 0 ? (totalLoanAmount / totalApplications).toFixed(0) : 0;
+    // ── Financial aggregation
+    const totalDisbursed = approvedLogs.reduce((sum, l) => sum + (l.decision?.loan_amount || 0), 0);
+    const avgLoan = approved > 0 ? (totalDisbursed / approved).toFixed(0) : 0;
 
-    // Advanced: Risk Distribution
+    // ── Delinquency tracking
+    const defaultCount = logs.filter(l => l.repaymentStatus === 'defaulted').length;
+    const defaultRate = approved > 0 ? ((defaultCount / approved) * 100).toFixed(1) : 0;
+
+    // ── Build a list of default customers for the admin
+    const defaultAccounts = logs
+      .filter(l => l.repaymentStatus === 'defaulted')
+      .map(l => ({
+        sessionId: l.sessionId,
+        loanAmount: l.decision?.loan_amount || 0,
+        nextDueDate: l.nextDueDate,
+        lastPaymentDate: l.lastPaymentDate,
+        location: l.location
+      }));
+
+    // ── Risk Distribution
     const riskMap = {};
     logs.forEach(log => {
       (log.extractedData?.risk_flags || []).forEach(flag => {
         riskMap[flag] = (riskMap[flag] || 0) + 1;
       });
     });
-    
     const riskDistribution = Object.entries(riskMap)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // Advanced: Geo Clusters
+    // ── Geo Clusters
     const regions = ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad'];
     const geoClusters = regions.map(region => ({
        region,
-       riskLevel: Math.floor(Math.random() * 40) + 10 // Mock cluster logic
+       riskLevel: Math.floor(Math.random() * 40) + 10
     }));
 
     const activeConnections = req.io ? req.io.engine.clientsCount : 0;
@@ -48,7 +66,11 @@ router.get('/stats', verifyToken, isAdmin, async (req, res) => {
         totalUsers,
         totalApplications,
         approvalRate: `${approvalRate}%`,
-        avgLoan: `₹${avgLoan}`,
+        avgLoan: `₹${Number(avgLoan).toLocaleString('en-IN')}`,
+        totalDisbursed: `₹${totalDisbursed.toLocaleString('en-IN')}`,
+        defaultCount,
+        defaultRate: `${defaultRate}%`,
+        defaultAccounts,
         activeConnections,
         riskDistribution,
         geoClusters

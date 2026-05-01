@@ -63,7 +63,7 @@ export default function AdminDashboard() {
         const data = await res.json();
         if (data.success) setUsers(data.users);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
         toast.success(`User promoted to ${newRole}`);
         setUsers(users.map(u => u._id === id ? { ...u, role: newRole } : u));
       }
-    } catch (err) {
+    } catch {
       toast.error('Role update failed');
     }
   };
@@ -97,7 +97,7 @@ export default function AdminDashboard() {
         toast.success('Account purged');
         setUsers(users.filter(u => u._id !== id));
       }
-    } catch (err) {
+    } catch {
       toast.error('Purge failed');
     }
   };
@@ -115,7 +115,7 @@ export default function AdminDashboard() {
         toast.success('Loan rejected by Administrative Override');
         setLogs(logs.map(l => l._id === id ? { ...l, decision: { ...l.decision, eligible: false, status: 'rejected' } } : l));
       }
-    } catch (err) {
+    } catch {
       toast.error('Rejection failed');
     }
   };
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
         toast.success('High-value loan approved');
         setLogs(logs.map(l => l._id === id ? { ...l, decision: { ...l.decision, eligible: true, status: 'approved' } } : l));
       }
-    } catch (err) {
+    } catch {
       toast.error('Approval failed');
     }
   };
@@ -188,22 +188,25 @@ export default function AdminDashboard() {
             
             {activeTab === 'overview' && stats && (
               <div className="space-y-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* ── 6-card metrics row ── */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   {[
-                    { label: 'Network Users', value: stats.totalUsers, icon: <Users />, color: 'text-blue-400', bg: 'bg-blue-400/10' },
-                    { label: 'Active WebApp', value: stats.activeConnections || 0, icon: <Activity />, color: 'text-green-400', bg: 'bg-green-400/10' },
-                    { label: 'Approval Rate', value: stats.approvalRate, icon: <TrendingUp />, color: 'text-orange-400', bg: 'bg-orange-400/10' },
-                    { label: 'Cluster Value', value: stats.avgLoan, icon: <UserCheck />, color: 'text-brand-primary', bg: 'bg-brand-primary/10' }
+                    { label: 'Network Users',    value: stats.totalUsers,           icon: <Users />,       color: 'text-blue-400',          bg: 'bg-blue-400/10' },
+                    { label: 'Active WebApp',     value: stats.activeConnections||0,  icon: <Activity />,    color: 'text-green-400',         bg: 'bg-green-400/10' },
+                    { label: 'Approval Rate',     value: stats.approvalRate,          icon: <TrendingUp />,  color: 'text-orange-400',        bg: 'bg-orange-400/10' },
+                    { label: 'Avg Loan Size',     value: stats.avgLoan,               icon: <UserCheck />,   color: 'text-brand-primary',     bg: 'bg-brand-primary/10' },
+                    { label: 'Total Disbursed',   value: stats.totalDisbursed,        icon: <Zap />,         color: 'text-brand-secondary',   bg: 'bg-brand-secondary/10' },
+                    { label: 'Default Accounts',  value: stats.defaultCount,          icon: <ShieldAlert />, color: 'text-red-400',           bg: 'bg-red-400/10' }
                   ].map((stat, i) => (
-                    <div key={i} className="glass-panel p-6 rounded-[32px] border border-white/5 group hover:bg-white/5 transition-all cursor-default">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>
-                          {React.cloneElement(stat.icon, { className: 'w-5 h-5' })}
+                    <div key={i} className="glass-panel p-5 rounded-[28px] border border-white/5 group hover:bg-white/5 transition-all cursor-default">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className={`p-2 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>
+                          {React.cloneElement(stat.icon, { className: 'w-4 h-4' })}
                         </div>
-                        <ArrowUpRight className="w-4 h-4 text-gray-700 group-hover:text-gray-400 transition-colors" />
+                        <ArrowUpRight className="w-3 h-3 text-gray-700 group-hover:text-gray-400 transition-colors" />
                       </div>
-                      <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{stat.label}</div>
-                      <div className="text-3xl font-black text-white">{stat.value}</div>
+                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{stat.label}</div>
+                      <div className="text-2xl font-black text-white">{stat.value}</div>
                     </div>
                   ))}
                 </div>
@@ -249,6 +252,64 @@ export default function AdminDashboard() {
                      </div>
                   </div>
                 </div>
+
+                {/* -- Defaulter Accounts Table -- */}
+                <div className="glass-panel rounded-[40px] p-8 border border-white/5">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-xl font-bold text-white flex items-center">
+                      <ShieldAlert className="w-5 h-5 mr-3 text-red-400" />
+                      Forensic Default Registry
+                    </h3>
+                    <div className="flex items-center space-x-3">
+                      <span className="px-4 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-black uppercase tracking-widest rounded-full">
+                        {stats.defaultCount} Delinquent
+                      </span>
+                      <span className="px-4 py-1.5 bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-widest rounded-full">
+                        Default Rate: {stats.defaultRate}
+                      </span>
+                    </div>
+                  </div>
+                  {stats.defaultAccounts?.length > 0 ? (
+                    <div className="overflow-x-auto rounded-3xl">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-white/[0.02] text-left">
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Session ID</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Loan Amount</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Next Due</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Last Payment</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Location</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {stats.defaultAccounts.map((acc, i) => (
+                            <tr key={i} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="px-6 py-4 font-mono text-xs text-brand-primary font-bold">{acc.sessionId}</td>
+                              <td className="px-6 py-4 font-black text-white">₹{(acc.loanAmount || 0).toLocaleString('en-IN')}</td>
+                              <td className="px-6 py-4 text-red-400 font-bold text-xs">
+                                {acc.nextDueDate ? new Date(acc.nextDueDate).toLocaleDateString('en-IN') : '—'}
+                              </td>
+                              <td className="px-6 py-4 text-gray-400 text-xs">
+                                {acc.lastPaymentDate ? new Date(acc.lastPaymentDate).toLocaleDateString('en-IN') : 'Never'}
+                              </td>
+                              <td className="px-6 py-4 text-gray-400 text-xs">{acc.location || '—'}</td>
+                              <td className="px-6 py-4">
+                                <span className="px-3 py-1 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full">DEFAULTED</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-16 rounded-3xl bg-white/[0.02] border-2 border-dashed border-white/5">
+                      <CheckCircle className="w-10 h-10 text-green-500/30 mx-auto mb-4" />
+                      <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No Delinquent Accounts — Portfolio Healthy</p>
+                    </div>
+                  )}
+                </div>
+
               </div>
             )}
 
@@ -321,6 +382,14 @@ export default function AdminDashboard() {
                                      className="px-4 py-2 rounded-xl bg-brand-primary text-white text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
                                    >
                                      Approve
+                                   </button>
+                                 )}
+                                 {log.decision?.status !== 'rejected' && (
+                                   <button 
+                                     onClick={() => rejectLoan(log._id)}
+                                     className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                                   >
+                                     Reject
                                    </button>
                                  )}
                                  <div className="flex items-center space-x-2">

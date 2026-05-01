@@ -31,6 +31,9 @@ const auditLogSchema = new mongoose.Schema({
     status: String
   },
   payoutData: mongoose.Schema.Types.Mixed, // Receipt from RazorpayX
+  repaymentStatus: { type: String, enum: ['current', 'grace', 'defaulted'], default: 'current' },
+  lastPaymentDate: Date,
+  nextDueDate: Date,
   blinkCount: Number,
   stressLevel: String,
   voiceHash: String,
