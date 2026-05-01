@@ -16,112 +16,30 @@ router.post('/signup', captchaVerify, async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ success: false, error: 'User already exists' });
 
-    // Generate Verification Token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
-
     const role = email.includes('admin') ? 'admin' : 'customer';
     const user = new User({ 
       name, 
       email, 
       password, 
-      role,
-      verificationToken: hashedVerificationToken
+      role
     });
     
     await user.save();
 
-    // Create Verification URL
-    const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify/${verificationToken}`;
-    
-    const message = `
-      <h1>Email Verification</h1>
-      <p>Thank you for registering. Please verify your email by clicking the link below:</p>
-      <a href="${verifyUrl}" clicktracking=off>${verifyUrl}</a>
-    `;
+    // Auto-login after successful signup
+    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
 
-    try {
-      await sendEmail({
-        email: user.email,
-        subject: 'Email Verification',
-        message
-      });
-      res.status(201).json({ success: true, message: 'Verification email sent. Please check your inbox.' });
-    } catch (error) {
-      user.verificationToken = undefined;
-      await user.save();
-      return res.status(500).json({ success: false, error: 'Email could not be sent' });
-    }
+    res.status(201).json({ 
+      success: true, 
+      token, 
+      user: { id: user._id, name: user.name, email, role: user.role } 
+    });
   } catch (error) {
     console.error('Signup Error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Verify Email
-router.get('/verify/:token', async (req, res) => {
-  try {
-    // Get hashed token
-    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
-
-    const user = await User.findOne({ verificationToken: hashedToken });
-    if (!user) {
-      return res.status(400).json({ success: false, error: 'Invalid or expired verification token' });
-    }
-
-    // Mark as verified
-    user.isVerified = true;
-    user.verificationToken = undefined;
-    await user.save();
-
-    res.status(200).json({ success: true, message: 'Email verified successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Resend Verification Email
-router.post('/resend-verification', async (req, res) => {
-  try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-    
-    if (user.isVerified) {
-      return res.status(400).json({ success: false, error: 'User is already verified' });
-    }
-
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    user.verificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
-    await user.save();
-
-    const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify/${verificationToken}`;
-    
-    const message = `
-      <h1>Email Verification</h1>
-      <p>Please verify your email by clicking the link below:</p>
-      <a href="${verifyUrl}" clicktracking=off>${verifyUrl}</a>
-    `;
-
-    try {
-      await sendEmail({
-        email: user.email,
-        subject: 'Email Verification - Resend',
-        message
-      });
-      res.status(200).json({ success: true, message: 'Verification email resent' });
-    } catch (error) {
-      user.verificationToken = undefined;
-      await user.save();
-      return res.status(500).json({ success: false, error: 'Email could not be sent' });
-    }
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
 
 // Login
 router.post('/login', captchaVerify, async (req, res) => {
@@ -134,13 +52,9 @@ router.post('/login', captchaVerify, async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(401).json({ success: false, error: 'Invalid credentials' });
 
-    if (!user.isVerified) {
-      return res.status(403).json({ success: false, error: 'Please verify your email before accessing features', isVerified: false });
-    }
+    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
 
-    const token = jwt.sign({ id: user._id, role: user.role, isVerified: user.isVerified }, JWT_SECRET, { expiresIn: '1d' });
-
-    res.status(200).json({ success: true, token, user: { id: user._id, name: user.name, email, role: user.role, isVerified: user.isVerified } });
+    res.status(200).json({ success: true, token, user: { id: user._id, name: user.name, email, role: user.role } });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, UserPlus, CheckCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { User, Mail, Lock, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TurnstileWidget from '../../components/common/TurnstileWidget';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -23,8 +24,13 @@ export default function SignupPage() {
       });
       const data = await response.json();
       if (data.success) {
-        setIsSubmitted(true);
-        toast.success(data.message || 'Verification email sent!');
+        toast.success('Account created successfully!');
+        login(data.user, data.token);
+        if (data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         toast.error(data.error || 'Failed to create account');
       }
@@ -34,29 +40,6 @@ export default function SignupPage() {
       setLoading(false);
     }
   };
-
-  if (isSubmitted) {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center px-6">
-        <div className="max-w-md w-full">
-          <div className="glass-panel p-8 rounded-3xl relative overflow-hidden text-center">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary opacity-10 blur-3xl -mr-16 -mt-16 rounded-full"></div>
-            <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-6" />
-            <h2 className="text-3xl font-bold text-white mb-4">Verify Your Email</h2>
-            <p className="text-gray-300 mb-8">
-              We've sent a verification link to <strong>{formData.email}</strong>. Please check your inbox and verify your email to continue.
-            </p>
-            <Link 
-              to="/login"
-              className="w-full inline-block bg-brand-primary hover:bg-indigo-600 font-bold py-4 rounded-2xl transition-all shadow-xl text-white"
-            >
-              Go to Login
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-6 py-12">

@@ -8,8 +8,6 @@ import TurnstileWidget from '../../components/common/TurnstileWidget';
 export default function LoginPage() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [unverified, setUnverified] = useState(false);
-  const [resending, setResending] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -36,9 +34,6 @@ export default function LoginPage() {
         }
       } else {
         toast.error(data.error || 'Invalid credentials');
-        if (data.isVerified === false) {
-          setUnverified(true);
-        }
       }
     } catch (err) {
       toast.error('Connection failed');
@@ -47,27 +42,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleResend = async () => {
-    setResending(true);
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-      const response = await fetch(`${apiUrl}/auth/resend-verification`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email })
-      });
-      const data = await response.json();
-      if (data.success) {
-        toast.success('Verification email sent! Please check your inbox.');
-      } else {
-        toast.error(data.error || 'Failed to resend email');
-      }
-    } catch (err) {
-      toast.error('Connection failed');
-    } finally {
-      setResending(false);
-    }
-  };
+
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-6">
@@ -130,18 +105,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {unverified && (
-            <div className="mt-4 p-4 bg-red-900/30 border border-red-500/30 rounded-xl text-center">
-              <p className="text-red-400 text-sm mb-3">Your email is not verified.</p>
-              <button 
-                onClick={handleResend}
-                disabled={resending}
-                className="text-sm font-medium text-white bg-red-600 hover:bg-red-700 py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {resending ? 'Sending...' : 'Resend Verification Email'}
-              </button>
-            </div>
-          )}
+
 
           <div className="mt-8 text-center border-t border-white/5 pt-6">
             <p className="text-sm text-gray-500">

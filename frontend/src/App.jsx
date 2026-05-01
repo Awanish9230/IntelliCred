@@ -17,7 +17,6 @@ import Profile from './pages/private/Profile';
 import AdminDashboard from './pages/private/AdminDashboard';
 import LoanResult from './pages/private/LoanResult';
 import DocumentUploadPage from './pages/private/DocumentUploadPage';
-import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 // Protected Route Wrapper
@@ -53,7 +52,6 @@ function AppRoutes() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/verify/:token" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           {/* Private Routes */}
