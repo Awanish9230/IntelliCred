@@ -15,7 +15,6 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setUnverified(false);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
       const response = await fetch(`${apiUrl}/auth/login`, {
