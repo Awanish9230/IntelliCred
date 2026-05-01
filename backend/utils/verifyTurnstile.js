@@ -1,3 +1,5 @@
+const axios = require('axios');
+
 const verifyTurnstile = async (token) => {
   const secretKey = process.env.TURNSTILE_SECRET_KEY;
   if (!secretKey) {
@@ -10,16 +12,16 @@ const verifyTurnstile = async (token) => {
     formData.append('secret', secretKey);
     formData.append('response', token);
 
-    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method: 'POST',
-      body: formData,
+    const response = await axios.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', formData.toString(), {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
     });
 
-    const data = await response.json();
-    console.log('Turnstile verification response:', data); // Add this log to help debugging
-    return data.success;
+    console.log('Turnstile verification response:', response.data); // Add this log to help debugging
+    return response.data.success;
   } catch (err) {
-    console.error('Error verifying Turnstile:', err);
+    console.error('Error verifying Turnstile:', err.message);
     return false;
   }
 };
