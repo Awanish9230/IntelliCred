@@ -103,4 +103,3 @@ Built with the **MERN stack** and designed with a premium **glassmorphism aesthe
 ## 📜 License
 Distributed under the MIT License. See `LICENSE` for more information.
 
-Developed with ❤️ by Antigravity.
